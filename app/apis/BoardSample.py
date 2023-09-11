@@ -123,7 +123,7 @@ class BoardPost(Resource):
         args = _Schema.board_list_params.parse_args()
         (board_list, totalcount) = BoardService().get_board_list(args['start_row'], args['row_per_page'])
         # marshal_with 에 등록된 모델과 일치하지 않는 필드는 매핑되지 않음
-        return {'totalcount': totalcount, 'board_list': board_list}
+        return {'totalcount': totalcount, 'board_list': board_list}, int(HTTPStatus.OK)
 
     # request : Model을 사용할 경우 validate 옵션을 설정해야 설정된 유효성 검사를 할 수 있음
     #           RESTX_VALIDATE 설정으로 기본값을 변경 할 수 있음
