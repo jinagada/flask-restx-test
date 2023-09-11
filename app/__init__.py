@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flask import Flask, Blueprint, g
 from flask_restx import Api, apidoc, fields
-from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllowed
+from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllowed, NotFound
 
 from .configs import PROJECT_ID
 from .services import Sqlite3Service
@@ -65,6 +65,20 @@ def init_global():
         g.env_val = env_val
 
 
+# Flask 오류 설정
+@app.errorhandler(404)
+def handle_404_error(error):
+    """
+    실제 URL이 없는경우에 대한 처리
+    :param error:
+    :type error:
+    :return:
+    :rtype:
+    """
+    err_log(logger, error, __name__, traceback.format_exc(), '404 File Not Found')
+    return {'message': str(error)}, int(HTTPStatus.NOT_FOUND)
+
+
 # 등록된 순서대로 처리되므로 500 오류를 가장 마지막에 등록할것!!
 @api.errorhandler(BadRequest)
 @api.marshal_with(error_model, code=int(HTTPStatus.BAD_REQUEST), description='400 오류')
@@ -73,9 +87,16 @@ def handle_400_exception(error):
     return {'message': str(error)}, int(HTTPStatus.BAD_REQUEST)
 
 
-@api.errorhandler(FileNotFoundError)
+@api.errorhandler(NotFound)
 @api.marshal_with(system_error_model, code=int(HTTPStatus.NOT_FOUND), description='404 오류')
 def handle_404_exception(error):
+    """
+    소스에서 임의로 발생시킨 Not Found
+    :param error:
+    :type error:
+    :return:
+    :rtype:
+    """
     err_log(logger, error, __name__, traceback.format_exc(), '404 File Not Found')
     return {'message': str(error)}, int(HTTPStatus.NOT_FOUND)
 

@@ -5,6 +5,7 @@ from http import HTTPStatus
 from flask import g
 from flask_restx import Namespace, Resource, fields, reqparse
 from werkzeug.datastructures import FileStorage
+from werkzeug.exceptions import NotFound
 
 import app
 from ..configs import PathConfig
@@ -148,7 +149,7 @@ class BoardSample(Resource):
     def get(self, board_seq):
         result = BoardService().get_board_by_seq(board_seq)
         if not result:
-            raise FileNotFoundError('게시물이 존재하지 않습니다.')
+            raise NotFound('게시물이 존재하지 않습니다.')
         return result, int(HTTPStatus.OK)
 
     @board_sample.expect(_Schema.board_save_model, validate=True)
@@ -164,7 +165,7 @@ class BoardSample(Resource):
     def delete(self, board_seq):
         result = BoardService().delete_boards([board_seq])
         if result < 1:
-            raise FileNotFoundError('게시물이 존재하지 않습니다.')
+            raise NotFound('게시물이 존재하지 않습니다.')
         return {'result': 'Success', 'deleted_count': result}, int(HTTPStatus.OK)
 
 
@@ -209,7 +210,7 @@ class BoardFilePost(Resource):
     def get(self, board_seq):
         result = BoardService().get_board_by_seq(board_seq)
         if not result:
-            raise FileNotFoundError('게시물이 존재하지 않습니다.')
+            raise NotFound('게시물이 존재하지 않습니다.')
         # 파일 목록 조회
         result = BoardService().get_board_file_list(board_seq)
         return {'board_seq': board_seq, 'file_list': result}, int(HTTPStatus.OK)
@@ -219,7 +220,7 @@ class BoardFilePost(Resource):
     def post(self, board_seq):
         result = BoardService().get_board_by_seq(board_seq)
         if not result:
-            raise FileNotFoundError('게시물이 존재하지 않습니다.')
+            raise NotFound('게시물이 존재하지 않습니다.')
         args = board_sample.payload
         # 파일 목록을 변수에 맞춰 매핑
         file_seqs = []

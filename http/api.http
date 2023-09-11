@@ -14,7 +14,7 @@ Content-Type: application/json; charset=UTF-8
 }
 
 ### BoardSample - /board/<int:board_seq>
-GET {{hosts}}/board/3
+GET {{hosts}}/board/4
 
 ### BoardSample - /board/<int:board_seq>
 PUT {{hosts}}/board/5

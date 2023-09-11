@@ -3,6 +3,7 @@ import os
 import shutil
 
 from flask import g
+from werkzeug.exceptions import NotFound
 
 from ..configs import PROJECT_ID, PathConfig
 from ..datasources import Sqlite3
@@ -94,7 +95,7 @@ class BoardService:
         if board_seq:
             board_info = self.get_board_by_seq(board_seq)
             if not board_info:
-                raise FileNotFoundError('게시물이 존재하지 않습니다.')
+                raise NotFound('게시물이 존재하지 않습니다.')
         else:
             board_info = None
         if board_info:
