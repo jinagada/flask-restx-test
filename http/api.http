@@ -1,0 +1,79 @@
+### BoardSample - /board
+GET {{hosts}}/board
+    ?start_row=0
+    &row_per_page=5
+
+### BoardSample - /board
+POST {{hosts}}/board
+Content-Type: application/json; charset=UTF-8
+
+{
+  "title": "제목",
+  "contents": "내용",
+  "user_id": "UserId"
+}
+
+### BoardSample - /board/<int:board_seq>
+GET {{hosts}}/board/3
+
+### BoardSample - /board/<int:board_seq>
+PUT {{hosts}}/board/5
+Content-Type: application/json; charset=UTF-8
+
+{
+  "title": "제목2",
+  "contents": "내용2",
+  "user_id": "UserId"
+}
+
+### BoardSample - /board/<int:board_seq>
+DELETE {{hosts}}/board/2
+
+### BoardSample - /board/fileupload
+# 테스트 시 한글 파일명이 깨지는 현상이 있어 filename 설정은 영어로 설정
+# 파일업로드를 브라우저에서 할 경우 한글 파일명이 깨지지 않음
+POST {{hosts}}/board/fileupload
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name=file; filename="sample.xlsx"
+
+< ../../../../Downloads/한글 파일명 (1).xlsx
+--boundary--
+
+### BoardSample - /board/<int:board_seq>/file
+POST {{hosts}}/board/2/file
+Content-Type: application/json; charset=UTF-8
+
+{
+  "user_id": "UserId",
+  "file_list": [
+    {
+      "file_seq": "",
+      "file_org_name": "sample.xlsx",
+      "file_tmp_path": "tmp",
+      "file_tmp_name": "621c2a4d6df04cc2a985de0ddcf311b2.xlsx"
+    },
+    {
+      "file_seq": "",
+      "file_org_name": "sample.xlsx",
+      "file_tmp_path": "tmp",
+      "file_tmp_name": "aa4a94f9a08d43f48d5b2eda1c3af37a.xlsx"
+    },
+    {
+      "file_seq": "",
+      "file_org_name": "sample.xlsx",
+      "file_tmp_path": "tmp",
+      "file_tmp_name": "0a2a39bb5e2745e993abd080abc14f71.xlsx"
+    },
+    {
+      "file_seq": "",
+      "file_org_name": "sample.xlsx",
+      "file_tmp_path": "tmp",
+      "file_tmp_name": "d13e28396203410a98fdaf4a417370a1.xlsx"
+    }
+  ]
+}
+
+### BoardSample - /board/<int:board_seq>/file
+GET {{hosts}}/board/1/file
