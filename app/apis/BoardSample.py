@@ -3,6 +3,7 @@ import uuid
 from http import HTTPStatus
 
 from flask import g
+from flask_jwt_extended import jwt_required, current_user
 from flask_restx import Namespace, Resource, fields, reqparse
 from werkzeug.datastructures import FileStorage
 from werkzeug.exceptions import NotFound
@@ -33,12 +34,12 @@ class _Schema:
     # 게시물 상세 모델
     board_save_model = board_sample.model('BoardSave', {
         'title': fields.String(description='게시물 제목', example='제목', attribute='TITLE', required=True, min_length=1, max_length=200),
-        'contents': fields.String(description='게시물 내용', example='내용', attribute='CONTENTS', required=True, min_length=1),
-        'user_id': fields.String(description='작성자', example='UserId', attribute='RUSER', required=True, min_length=5)
+        'contents': fields.String(description='게시물 내용', example='내용', attribute='CONTENTS', required=True, min_length=1)
     })
     board_detail_model = board_sample.inherit('BoardDetail', board_save_model, {
         'board_seq': fields.Integer(description='게시물 번호', example=1, attribute='SEQ'),
-        'user_id_m': fields.String(description='수정자', example='UserId', attribute='MUSER'),
+        'r_user_id': fields.String(description='작성자', example='UserId', attribute='RUSER'),
+        'm_user_id': fields.String(description='수정자', example='UserId', attribute='MUSER'),
         'rdate': fields.DateTime(description='등록일시', example='2023-09-06T14:42:06', attribute='RDATE'),
         'mdate': fields.DateTime(description='수정일시', example='2023-09-06T14:42:06', attribute='MDATE')
     })
@@ -86,11 +87,10 @@ class _Schema:
         'file_name': fields.String(description='파일명', example='beb7728bebcb430c9c63716caed6b808.txt', attribute='FNAME'),
         'file_org_name': fields.String(description='원본 파일명', example='aaa.txt', attribute='ONAME'),
         'rdate': fields.DateTime(description='등록일시', example='2023-09-06T14:42:06', attribute='RDATE'),
-        'user_id': fields.String(description='작성자', example='UserId', attribute='RUSER')
+        'r_user_id': fields.String(description='작성자', example='UserId', attribute='RUSER')
     })
     # 실제 파라메터로 넘길 파일정보 목록 모델
     file_save_list_model = board_sample.model('FileSaveList', {
-        'user_id': fields.String(description='작성자', example='UserId', required=True, min_length=5),
         'file_list': fields.List(fields.Nested(file_save_model))
     })
     # 파일 목록 모델
@@ -117,8 +117,13 @@ class BoardPost(Resource):
     # request : query 파라메터에서도 validate 옵션을 사용하면 설정된 유효성 검사가 function 진입전에 실행됨
     @board_sample.expect(_Schema.board_list_params, validate=True)
     # response : marshal_with를 사용하면 결과값에 대한 모델매핑과 apidoc을 한번에 작성 할 수 있음
-    @board_sample.marshal_with(_Schema.board_list_model, code=int(HTTPStatus.OK), description='게시물 목록 조회')
+    @board_sample.marshal_with(_Schema.board_list_model, code=int(HTTPStatus.OK), description='게시물 목록')
     def get(self):
+        """
+        게시물 목록 조회
+        :return:
+        :rtype:
+        """
         # query 파라메터의 경우 parse_args() 실행시 설정된 유효성 검사가 별도로 진행됨
         args = _Schema.board_list_params.parse_args()
         (board_list, totalcount) = BoardService().get_board_list(args['start_row'], args['row_per_page'])
@@ -127,12 +132,20 @@ class BoardPost(Resource):
 
     # request : Model을 사용할 경우 validate 옵션을 설정해야 설정된 유효성 검사를 할 수 있음
     #           RESTX_VALIDATE 설정으로 기본값을 변경 할 수 있음
+    @jwt_required()
+    @board_sample.doc(security='bearer_auth')
     @board_sample.expect(_Schema.board_save_model, validate=True)
-    @board_sample.marshal_with(_Schema.board_save_result_model, code=int(HTTPStatus.OK), description='게시물 등록')
+    @board_sample.marshal_with(_Schema.board_save_result_model, code=int(HTTPStatus.OK), description='게시물 등록결과')
     def post(self):
+        """
+        게시물 등록
+        :return:
+        :rtype:
+        """
         # request를 사용하지 않고, Namespace에서 payload로 JSON 객체를 가져올 수 있음
         args = board_sample.payload
-        result = BoardService().save_board(None, args['title'], args['contents'], args['user_id'])
+        # user_id 정보는 파라메터가 아닌 flask_jwt_extended 모듈의 current_user 정보에서 가져옮
+        result = BoardService().save_board(None, args['title'], args['contents'], current_user['USER_ID'])
         return {'result': 'Success', 'board_seq': result}, int(HTTPStatus.OK)
 
 
@@ -145,24 +158,49 @@ class BoardSample(Resource):
     """
     게시물 한건에 대한 조회, 수정, 삭제
     """
-    @board_sample.marshal_with(_Schema.board_detail_model, code=int(HTTPStatus.OK), description='게시물 단건 조회')
+    @board_sample.marshal_with(_Schema.board_detail_model, code=int(HTTPStatus.OK), description='게시물 상세정보')
     def get(self, board_seq):
+        """
+        게시물 상세조회
+        :param board_seq:
+        :type board_seq:
+        :return:
+        :rtype:
+        """
         result = BoardService().get_board_by_seq(board_seq)
         if not result:
             raise NotFound('게시물이 존재하지 않습니다.')
         return result, int(HTTPStatus.OK)
 
+    @jwt_required()
+    @board_sample.doc(security='bearer_auth')
     @board_sample.expect(_Schema.board_save_model, validate=True)
-    @board_sample.marshal_with(_Schema.board_detail_model, code=int(HTTPStatus.OK), description='게시물 단건 수정')
+    @board_sample.marshal_with(_Schema.board_detail_model, code=int(HTTPStatus.OK), description='게시물 수정결과')
     def put(self, board_seq):
+        """
+        게시물 수정
+        :param board_seq:
+        :type board_seq:
+        :return:
+        :rtype:
+        """
         args = board_sample.payload
         board = BoardService()
-        board.save_board(board_seq, args['title'], args['contents'], args['user_id'])
+        board.save_board(board_seq, args['title'], args['contents'], current_user['USER_ID'])
         result = board.get_board_by_seq(board_seq)
         return result, int(HTTPStatus.OK)
 
-    @board_sample.marshal_with(_Schema.board_delete_result_model, code=int(HTTPStatus.OK), description='게시물 단건 삭제')
+    @jwt_required()
+    @board_sample.doc(security='bearer_auth')
+    @board_sample.marshal_with(_Schema.board_delete_result_model, code=int(HTTPStatus.OK), description='게시물 삭제결과')
     def delete(self, board_seq):
+        """
+        게시물 삭제
+        :param board_seq:
+        :type board_seq:
+        :return:
+        :rtype:
+        """
         result = BoardService().delete_boards([board_seq])
         if result < 1:
             raise NotFound('게시물이 존재하지 않습니다.')
@@ -180,9 +218,16 @@ class FileUploadPost(Resource):
     flask-restx 에서는 여러파일을 한번에 업로드하는것을 기본적으로는 지원하지 않는것으로 보임
     https://github.com/python-restx/flask-restx/issues/177
     """
+    @jwt_required()
+    @board_sample.doc(security='bearer_auth')
     @board_sample.expect(_Schema.file_upload_params, validate=True)
-    @board_sample.marshal_with(_Schema.file_upload_result_model, code=int(HTTPStatus.OK), description='파일 단건 업로드')
+    @board_sample.marshal_with(_Schema.file_upload_result_model, code=int(HTTPStatus.OK), description='파일 업로드 결과')
     def post(self):
+        """
+        파일 업로드
+        :return:
+        :rtype:
+        """
         args = _Schema.file_upload_params.parse_args()
         uploaded_file = args['file']
         # 원본파일명
@@ -206,8 +251,15 @@ class FileUploadPost(Resource):
 @board_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
 @board_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
 class BoardFilePost(Resource):
-    @board_sample.marshal_with(_Schema.file_list_model, code=int(HTTPStatus.OK), description='게시물의 파일목록 조회')
+    @board_sample.marshal_with(_Schema.file_list_model, code=int(HTTPStatus.OK), description='게시물의 파일목록')
     def get(self, board_seq):
+        """
+        게시물의 파일목록 조회
+        :param board_seq:
+        :type board_seq:
+        :return:
+        :rtype:
+        """
         result = BoardService().get_board_by_seq(board_seq)
         if not result:
             raise NotFound('게시물이 존재하지 않습니다.')
@@ -215,9 +267,18 @@ class BoardFilePost(Resource):
         result = BoardService().get_board_file_list(board_seq)
         return {'board_seq': board_seq, 'file_list': result}, int(HTTPStatus.OK)
 
+    @jwt_required()
+    @board_sample.doc(security='bearer_auth')
     @board_sample.expect(_Schema.file_save_list_model, validate=True)
-    @board_sample.marshal_with(_Schema.file_save_result_model, code=int(HTTPStatus.OK), description='게시물에 파일정보 저장(수정, 삭제 포함)')
+    @board_sample.marshal_with(_Schema.file_save_result_model, code=int(HTTPStatus.OK), description='게시물에 파일정보 저장결과')
     def post(self, board_seq):
+        """
+        게시물에 파일정보 저장
+        :param board_seq:
+        :type board_seq:
+        :return:
+        :rtype:
+        """
         result = BoardService().get_board_by_seq(board_seq)
         if not result:
             raise NotFound('게시물이 존재하지 않습니다.')
@@ -235,7 +296,7 @@ class BoardFilePost(Resource):
                 file_tmp_names.append(file_info['file_tmp_name'])
                 file_tmp_paths.append(file_info['file_tmp_path'])
             # 파일정보 저장
-            BoardService().save_board_file(board_seq, file_seqs, file_org_names, file_tmp_names, file_tmp_paths, args['user_id'])
+            BoardService().save_board_file(board_seq, file_seqs, file_org_names, file_tmp_names, file_tmp_paths, current_user['USER_ID'])
         # 파일 목록 조회
         result = BoardService().get_board_file_list(board_seq)
         return {'result': 'Success', 'board_seq': board_seq, 'file_list': result}, int(HTTPStatus.OK)

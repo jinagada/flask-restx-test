@@ -5,11 +5,13 @@ from http import HTTPStatus
 from pathlib import Path
 
 from flask import Flask, Blueprint, g
+from flask_jwt_extended import JWTManager
+from flask_jwt_extended.exceptions import NoAuthorizationError, UserLookupError
 from flask_restx import Api, apidoc, fields
-from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllowed, NotFound
+from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllowed, NotFound, Unauthorized
 
 from .configs import PROJECT_ID
-from .services import Sqlite3Service
+from .services import Sqlite3Service, UsersService
 from .utils import err_log
 
 # env 설정
@@ -18,16 +20,28 @@ env_val = None
 logger = logging.getLogger(PROJECT_ID)
 # Flask 생성
 app = Flask(__name__)
+# JWT 설정
+app.config["JWT_SECRET_KEY"] = "HS256"
+jwt = JWTManager(app)
 # api 기본 URL 변경 : /api/v1
 api_path = Blueprint('api', __name__, url_prefix='/api/v1')
 # flask_restx 설정
 # doc 옵션으로 apidoc url path 변경, False 값을 추가하면 404 발생
 # @api.documentation 을 사용하여 별도 처리할 수 있음
+authorizations = {
+    'bearer_auth': {
+        'type': 'apiKey',
+        'in': 'header',
+        'name': 'Authorization'
+    }
+}
 api = Api(
     api_path,
     version='0.1',
     title='flask-restx Test',
-    doc='/docs'
+    doc='/docs',
+    authorizations=authorizations,
+    security='bearer_auth'
 )
 # Flask에 Blueprint 등록
 app.register_blueprint(api_path)
@@ -87,6 +101,16 @@ def handle_400_exception(error):
     return {'message': str(error)}, int(HTTPStatus.BAD_REQUEST)
 
 
+# 여러 오류를 등록하여 하나로 처리 할 수 있음
+@api.errorhandler(Unauthorized)
+@api.errorhandler(NoAuthorizationError)
+@api.errorhandler(UserLookupError)
+@api.marshal_with(system_error_model, code=int(HTTPStatus.UNAUTHORIZED), description='401 오류')
+def handle_401_exception(error):
+    err_log(logger, error, __name__, traceback.format_exc(), '401 Unauthorized')
+    return {'message': str(error)}, int(HTTPStatus.UNAUTHORIZED)
+
+
 @api.errorhandler(NotFound)
 @api.marshal_with(system_error_model, code=int(HTTPStatus.NOT_FOUND), description='404 오류')
 def handle_404_exception(error):
@@ -122,6 +146,43 @@ def handle_500_exception(error):
     return {'message': str(error)}, int(HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
+@jwt.user_identity_loader
+def user_identity_loader(user):
+    """
+    # Register a callback function that takes whatever object is passed in as the
+    # identity when creating JWTs and converts it to a JSON serializable format.
+
+    로그인 처리 후 JWT 객체에 등록된 사용자 정보 중 SEQ 반환
+    :param user:
+    :type user:
+    :return:
+    :rtype:
+    """
+    return user['SEQ']
+
+
+@jwt.user_lookup_loader
+def user_lookup_loader(_jwt_header, jwt_data):
+    """
+    # Register a callback function that loads a user from your database whenever
+    # a protected route is accessed. This should return any python object on a
+    # successful lookup, or None if the lookup failed for any reason (for example
+    # if the user has been deleted from the database).
+
+    JWT 정보에서 실제 사용자 정보를 조회
+    :param _jwt_header:
+    :type _jwt_header:
+    :param jwt_data:
+    :type jwt_data:
+    :return:
+    :rtype:
+    """
+    # sub 정보에는 user_identity_loader에서 반환된 SEQ 값이 저장되어 있음
+    identity = jwt_data['sub']
+    user_info = UsersService().get_user_by_seq(identity)
+    return user_info
+
+
 def register_router(api_param):
     """
     API router 설정
@@ -132,7 +193,8 @@ def register_router(api_param):
     :rtype:
     """
     # Namespace 객체가 import 되어야함
-    from .apis import board_sample
+    from .apis import login_sample, board_sample
+    api_param.add_namespace(login_sample)
     api_param.add_namespace(board_sample)
 
 

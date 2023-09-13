@@ -1,3 +1,17 @@
+### UserSample - /login
+POST {{hosts}}/login
+Content-Type: application/json; charset=UTF-8
+
+{
+  "user_id": "admin",
+  "password": "1234!"
+}
+
+> {%
+client.global.set("auth_token", response.body.access_token);
+client.log("Bearer " + client.global.get("auth_token"));
+%}
+
 ### BoardSample - /board
 GET {{hosts}}/board
     ?start_row=0
@@ -5,12 +19,12 @@ GET {{hosts}}/board
 
 ### BoardSample - /board
 POST {{hosts}}/board
+Authorization: Bearer {{auth_token}}
 Content-Type: application/json; charset=UTF-8
 
 {
   "title": "제목",
-  "contents": "내용",
-  "user_id": "UserId"
+  "contents": "내용"
 }
 
 ### BoardSample - /board/<int:board_seq>
@@ -18,16 +32,17 @@ GET {{hosts}}/board/4
 
 ### BoardSample - /board/<int:board_seq>
 PUT {{hosts}}/board/5
+Authorization: Bearer {{auth_token}}
 Content-Type: application/json; charset=UTF-8
 
 {
-  "title": "제목2",
-  "contents": "내용2",
-  "user_id": "UserId"
+  "title": "제목3",
+  "contents": "내용3"
 }
 
 ### BoardSample - /board/<int:board_seq>
 DELETE {{hosts}}/board/2
+Authorization: Bearer {{auth_token}}
 
 ### BoardSample - /board/fileupload
 # 테스트 시 한글 파일명이 깨지는 현상이 있어 filename 설정은 영어로 설정

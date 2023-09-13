@@ -8,6 +8,7 @@
 * Werkzeug 2.2.3
 * flask-restx 1.0.6
 * Sqlite 3.43.0
+* flask-jwt-extended 4.5.2
 
 # 참고 문서
 - [Welcome to Flask-RESTX’s documentation!](https://flask-restx.readthedocs.io/en/latest/index.html)
