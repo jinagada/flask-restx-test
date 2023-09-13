@@ -24,7 +24,7 @@ class UsersService:
         :param user_id:
         :return:
         """
-        user_info = Sqlite3().execute('SELECT SEQ, USER_ID, USER_PW, USER_NAME, RDATE, MDATE FROM USERS WHERE USER_ID = ?', (user_id,), True)
+        user_info = Sqlite3().execute('SELECT SEQ, USER_ID, USER_PW, USER_NAME, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE FROM USERS WHERE USER_ID = ?', (user_id,), True)
         return user_info
 
     @staticmethod
@@ -34,7 +34,7 @@ class UsersService:
         :param user_seq:
         :return:
         """
-        user_info = Sqlite3().execute('SELECT SEQ, USER_ID, USER_PW, USER_NAME, RDATE, MDATE FROM USERS WHERE SEQ = ?', (user_seq,), True)
+        user_info = Sqlite3().execute('SELECT SEQ, USER_ID, USER_PW, USER_NAME, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE FROM USERS WHERE SEQ = ?', (user_seq,), True)
         return user_info
 
     @staticmethod
@@ -45,7 +45,7 @@ class UsersService:
         :param row_per_page:
         :return:
         """
-        user_list = Sqlite3().execute('SELECT SEQ, USER_ID, USER_PW, USER_NAME, RDATE, MDATE FROM USERS ORDER BY RDATE DESC LIMIT ?, ?', (start_row, row_per_page))
+        user_list = Sqlite3().execute('SELECT SEQ, USER_ID, USER_PW, USER_NAME, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE FROM USERS ORDER BY RDATE DESC LIMIT ?, ?', (start_row, row_per_page))
         totalcount = Sqlite3().execute(query='SELECT COUNT(*) AS CNT FROM USERS', is_one=True)['CNT']
         return user_list, totalcount
 

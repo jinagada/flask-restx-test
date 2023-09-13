@@ -12,10 +12,29 @@ client.global.set("auth_token", response.body.access_token);
 client.log("Bearer " + client.global.get("auth_token"));
 %}
 
+### UserSample - /user
+GET {{hosts}}/user
+    ?start_row=0
+    &row_per_page=5
+Authorization: Bearer {{auth_token}}
+
+### UserSample - /user
+POST {{hosts}}/user
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json; charset=UTF-8
+
+{
+  "user_id": "UserId1",
+  "password": "1234!",
+  "user_name": "User Name1"
+}
+
 ### BoardSample - /board
 GET {{hosts}}/board
     ?start_row=0
     &row_per_page=5
+# optional=True
+Authorization: Bearer {{auth_token}}
 
 ### BoardSample - /board
 POST {{hosts}}/board

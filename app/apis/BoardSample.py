@@ -1,15 +1,16 @@
+import logging
 import os
 import uuid
 from http import HTTPStatus
 
 from flask import g
-from flask_jwt_extended import jwt_required, current_user
+from flask_jwt_extended import jwt_required, current_user, get_jwt_identity
 from flask_restx import Namespace, Resource, fields, reqparse
 from werkzeug.datastructures import FileStorage
 from werkzeug.exceptions import NotFound
 
 import app
-from ..configs import PathConfig
+from ..configs import PathConfig, PROJECT_ID
 from ..services import BoardService
 
 # path에 설정된 URL을 기준으로 각 Namespace가 구분됨
@@ -19,6 +20,8 @@ board_sample = Namespace(
     name='Board Sample',
     description='간단한 게시판 예제'
 )
+# Namespace logger 설정
+board_sample.logger = logging.getLogger(f'{PROJECT_ID}.apis.BoardSample')
 
 
 class _Schema:
@@ -115,6 +118,7 @@ class BoardPost(Resource):
     게시물 목록 조회, 게시물 등록
     """
     # request : query 파라메터에서도 validate 옵션을 사용하면 설정된 유효성 검사가 function 진입전에 실행됨
+    @jwt_required(optional=True)
     @board_sample.expect(_Schema.board_list_params, validate=True)
     # response : marshal_with를 사용하면 결과값에 대한 모델매핑과 apidoc을 한번에 작성 할 수 있음
     @board_sample.marshal_with(_Schema.board_list_model, code=int(HTTPStatus.OK), description='게시물 목록')
@@ -124,6 +128,11 @@ class BoardPost(Resource):
         :return:
         :rtype:
         """
+        # JWT TOKEN 이 있는경우 해당 정보를 로그로 남김
+        current_identity = get_jwt_identity()
+        if current_identity:
+            # Namespace logger 사용
+            board_sample.logger.info(f'게시물 조회 접근자 : {current_user["USER_ID"]}')
         # query 파라메터의 경우 parse_args() 실행시 설정된 유효성 검사가 별도로 진행됨
         args = _Schema.board_list_params.parse_args()
         (board_list, totalcount) = BoardService().get_board_list(args['start_row'], args['row_per_page'])

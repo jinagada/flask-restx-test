@@ -1,6 +1,7 @@
 import logging
 import os
 import traceback
+from datetime import datetime, timezone
 from http import HTTPStatus
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from flask import Flask, Blueprint, g
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended.exceptions import NoAuthorizationError, UserLookupError
 from flask_restx import Api, apidoc, fields
+from jwt.exceptions import ExpiredSignatureError
 from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllowed, NotFound, Unauthorized
 
 from .configs import PROJECT_ID
@@ -105,6 +107,7 @@ def handle_400_exception(error):
 @api.errorhandler(Unauthorized)
 @api.errorhandler(NoAuthorizationError)
 @api.errorhandler(UserLookupError)
+@api.errorhandler(ExpiredSignatureError)
 @api.marshal_with(system_error_model, code=int(HTTPStatus.UNAUTHORIZED), description='401 오류')
 def handle_401_exception(error):
     err_log(logger, error, __name__, traceback.format_exc(), '401 Unauthorized')
@@ -169,6 +172,8 @@ def user_lookup_loader(_jwt_header, jwt_data):
     # successful lookup, or None if the lookup failed for any reason (for example
     # if the user has been deleted from the database).
 
+    TOKEN 정보가 사용될 경우에만 호출됨
+    TOKEN 만료시간이 지나면 ExpiredSignatureError 가 자동으로 발생함
     JWT 정보에서 실제 사용자 정보를 조회
     :param _jwt_header:
     :type _jwt_header:
@@ -177,6 +182,10 @@ def user_lookup_loader(_jwt_header, jwt_data):
     :return:
     :rtype:
     """
+    # 만료시간 확인
+    exp_timestamp = jwt_data['exp']
+    now = datetime.now(timezone.utc)
+    logger.info(f'now: {now}, exp: {datetime.utcfromtimestamp(exp_timestamp)}')
     # sub 정보에는 user_identity_loader에서 반환된 SEQ 값이 저장되어 있음
     identity = jwt_data['sub']
     user_info = UsersService().get_user_by_seq(identity)
@@ -193,9 +202,10 @@ def register_router(api_param):
     :rtype:
     """
     # Namespace 객체가 import 되어야함
-    from .apis import login_sample, board_sample
+    from .apis import login_sample, board_sample, user_sample
     api_param.add_namespace(login_sample)
     api_param.add_namespace(board_sample)
+    api_param.add_namespace(user_sample)
 
 
 def init_app(env):
