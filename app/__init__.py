@@ -7,7 +7,7 @@ from pathlib import Path
 
 from flask import Flask, Blueprint, g
 from flask_jwt_extended import JWTManager
-from flask_jwt_extended.exceptions import NoAuthorizationError, UserLookupError
+from flask_jwt_extended.exceptions import NoAuthorizationError, UserLookupError, WrongTokenError
 from flask_restx import Api, apidoc, fields
 from jwt.exceptions import ExpiredSignatureError
 from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllowed, NotFound, Unauthorized
@@ -28,22 +28,25 @@ jwt = JWTManager(app)
 # api 기본 URL 변경 : /api/v1
 api_path = Blueprint('api', __name__, url_prefix='/api/v1')
 # flask_restx 설정
-# doc 옵션으로 apidoc url path 변경, False 값을 추가하면 404 발생
-# @api.documentation 을 사용하여 별도 처리할 수 있음
+# authorizations 설정을 하면 상단에 "Authorize" 버튼이 나타남
 authorizations = {
     'bearer_auth': {
         'type': 'apiKey',
         'in': 'header',
-        'name': 'Authorization'
+        'name': 'Authorization',
+        'bearerFormat': 'JWT',
+        'description': '/login 을 사용하여 얻은 access_token 을 사용\n예) Bearer <JWT TOKEN>'
     }
 }
+# doc 옵션으로 apidoc url path 변경, False 값을 추가하면 404 발생
+# @api.documentation 을 사용하여 별도 처리할 수 있음
+# security 설정을 하면 전체 API 목록에 좌물쇠 버튼이 나타남
 api = Api(
     api_path,
     version='0.1',
     title='flask-restx Test',
     doc='/docs',
-    authorizations=authorizations,
-    security='bearer_auth'
+    authorizations=authorizations
 )
 # Flask에 Blueprint 등록
 app.register_blueprint(api_path)
@@ -67,6 +70,8 @@ def api_doc():
     :return:
     :rtype:
     """
+    if g.env_val != 'local':
+        raise NotFound('운영에서는 문서를 제공하지 않음')
     return apidoc.ui_for(api)
 
 
@@ -106,8 +111,9 @@ def handle_400_exception(error):
 # 여러 오류를 등록하여 하나로 처리 할 수 있음
 @api.errorhandler(Unauthorized)
 @api.errorhandler(NoAuthorizationError)
-@api.errorhandler(UserLookupError)
 @api.errorhandler(ExpiredSignatureError)
+@api.errorhandler(WrongTokenError)
+@api.errorhandler(UserLookupError)
 @api.marshal_with(system_error_model, code=int(HTTPStatus.UNAUTHORIZED), description='401 오류')
 def handle_401_exception(error):
     err_log(logger, error, __name__, traceback.format_exc(), '401 Unauthorized')
@@ -204,8 +210,9 @@ def register_router(api_param):
     :rtype:
     """
     # Namespace 객체가 import 되어야함
-    from .apis import login_sample, board_sample, user_sample
+    from .apis import login_sample, refresh_sample, board_sample, user_sample
     api_param.add_namespace(login_sample)
+    api_param.add_namespace(refresh_sample)
     api_param.add_namespace(board_sample)
     api_param.add_namespace(user_sample)
 

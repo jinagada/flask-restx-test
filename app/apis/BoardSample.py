@@ -109,6 +109,7 @@ class _Schema:
 
 # Namespace에 설정된 path값 이후의 URL을 route에 추가할 수 있음
 @board_sample.route('')
+@board_sample.doc(security='bearer_auth')
 # 모든 METHOD에 동일한 code가 사용되는 경우 class에 설정하면 한번에 적용 가능함
 @board_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.error_model)
 @board_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
@@ -183,6 +184,7 @@ class BoardSample(Resource):
         return result, int(HTTPStatus.OK)
 
     @jwt_required()
+    @board_sample.doc(security='bearer_auth')
     @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
     @board_sample.expect(_Schema.board_save_model, validate=True)
     @board_sample.marshal_with(_Schema.board_detail_model, code=int(HTTPStatus.OK), description='게시물 수정결과')
@@ -201,6 +203,7 @@ class BoardSample(Resource):
         return result, int(HTTPStatus.OK)
 
     @jwt_required()
+    @board_sample.doc(security='bearer_auth')
     @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
     @board_sample.marshal_with(_Schema.board_delete_result_model, code=int(HTTPStatus.OK), description='게시물 삭제결과')
     def delete(self, board_seq):
@@ -218,6 +221,7 @@ class BoardSample(Resource):
 
 
 @board_sample.route('/fileupload')
+@board_sample.doc(security='bearer_auth')
 @board_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.error_model)
 @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
 @board_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
@@ -278,6 +282,7 @@ class BoardFilePost(Resource):
         return {'board_seq': board_seq, 'file_list': result}, int(HTTPStatus.OK)
 
     @jwt_required()
+    @board_sample.doc(security='bearer_auth')
     @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
     @board_sample.expect(_Schema.file_save_list_model, validate=True)
     @board_sample.marshal_with(_Schema.file_save_result_model, code=int(HTTPStatus.OK), description='게시물에 파일정보 저장결과')

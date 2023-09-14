@@ -8,23 +8,38 @@ Content-Type: application/json; charset=UTF-8
 }
 
 > {%
-client.global.set("auth_token", response.body.access_token);
-client.log("Bearer " + client.global.get("auth_token"));
+client.global.set("access_token", response.body.access_token);
+client.global.set("refresh_token", response.body.refresh_token);
+client.log("Bearer " + client.global.get("access_token"));
+client.log("Bearer " + client.global.get("refresh_token"));
 %}
 
 ### UserSample - /login
 GET {{hosts}}/login
-Authorization: Bearer {{auth_token}}
+Authorization: Bearer {{access_token}}
+
+### UserSample - /refresh
+POST {{hosts}}/refresh
+Authorization: Bearer {{refresh_token}}
+
+> {%
+client.global.set("access_token", response.body.access_token);
+client.log("Bearer " + client.global.get("access_token"));
+%}
+
+### UserSample - /refresh
+GET {{hosts}}/refresh
+Authorization: Bearer {{refresh_token}}
 
 ### UserSample - /user
 GET {{hosts}}/user
     ?start_row=0
     &row_per_page=10
-Authorization: Bearer {{auth_token}}
+Authorization: Bearer {{access_token}}
 
 ### UserSample - /user
 POST {{hosts}}/user
-Authorization: Bearer {{auth_token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json; charset=UTF-8
 
 {
@@ -35,11 +50,11 @@ Content-Type: application/json; charset=UTF-8
 
 ### UserSample - /user/<int:user_seq>
 GET {{hosts}}/user/2
-Authorization: Bearer {{auth_token}}
+Authorization: Bearer {{access_token}}
 
 ### UserSample - /user/<int:user_seq>
 PUT {{hosts}}/user/3
-Authorization: Bearer {{auth_token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json; charset=UTF-8
 
 {
@@ -50,18 +65,18 @@ Content-Type: application/json; charset=UTF-8
 
 ### UserSample - /user/<int:user_seq>
 DELETE {{hosts}}/user/2
-Authorization: Bearer {{auth_token}}
+Authorization: Bearer {{access_token}}
 
 ### BoardSample - /board
 GET {{hosts}}/board
     ?start_row=0
     &row_per_page=5
 # optional=True
-Authorization: Bearer {{auth_token}}
+Authorization: Bearer {{access_token}}
 
 ### BoardSample - /board
 POST {{hosts}}/board
-Authorization: Bearer {{auth_token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json; charset=UTF-8
 
 {
@@ -74,7 +89,7 @@ GET {{hosts}}/board/4
 
 ### BoardSample - /board/<int:board_seq>
 PUT {{hosts}}/board/5
-Authorization: Bearer {{auth_token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json; charset=UTF-8
 
 {
@@ -84,7 +99,7 @@ Content-Type: application/json; charset=UTF-8
 
 ### BoardSample - /board/<int:board_seq>
 DELETE {{hosts}}/board/2
-Authorization: Bearer {{auth_token}}
+Authorization: Bearer {{access_token}}
 
 ### BoardSample - /board/fileupload
 # 테스트 시 한글 파일명이 깨지는 현상이 있어 filename 설정은 영어로 설정

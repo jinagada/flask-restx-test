@@ -2,7 +2,7 @@ import logging
 from datetime import timedelta
 from http import HTTPStatus
 
-from flask_jwt_extended import create_access_token, jwt_required, current_user
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, current_user
 from flask_restx import Namespace, Resource, fields, reqparse
 from werkzeug.exceptions import Unauthorized, NotFound
 
@@ -16,6 +16,12 @@ login_sample = Namespace(
     description='JWT 로그인 예제'
 )
 login_sample.logger = logging.getLogger(f'{PROJECT_ID}.apis.LoginSample')
+refresh_sample = Namespace(
+    path='/refresh',
+    name='Refresh Sample',
+    description='JWT TOKEN Refresh 예제'
+)
+refresh_sample.logger = logging.getLogger(f'{PROJECT_ID}.apis.RefreshSample')
 user_sample = Namespace(
     path='/user',
     name='User Sample',
@@ -30,7 +36,11 @@ class _Schema:
         'user_id': fields.String(description='사용자ID', example='UserId', required=True, min_length=5),
         'password': fields.String(description='비밀번호', example='12#$qw', required=True, min_length=5),
     })
-    jwt_token_model = login_sample.model('JWTToken', {
+    jwt_token_login_model = login_sample.model('JWTTokenLogin', {
+        'access_token': fields.String(description='JWT Access Token', example='JWT TOKEN'),
+        'refresh_token': fields.String(description='JWT Refresh Token', example='JWT TOKEN')
+    })
+    jwt_token_refresh_model = login_sample.model('JWTTokenRefresh', {
         'access_token': fields.String(description='JWT Access Token', example='JWT TOKEN')
     })
     # 사용자 목록 조회 파라메터
@@ -66,7 +76,7 @@ class _Schema:
 
 
 @login_sample.route('')
-@login_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.error_model)
+@login_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
 @login_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
 @login_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
 class LoginPost(Resource):
@@ -74,7 +84,7 @@ class LoginPost(Resource):
     사용자 로그인
     """
     @login_sample.expect(_Schema.login_model, validate=True)
-    @login_sample.marshal_with(_Schema.jwt_token_model, code=int(HTTPStatus.OK), description='JWT TOKEN 정보')
+    @login_sample.marshal_with(_Schema.jwt_token_login_model, code=int(HTTPStatus.OK), description='JWT TOKEN Login 정보')
     def post(self):
         """
         로그인
@@ -88,12 +98,18 @@ class LoginPost(Resource):
                 raise Unauthorized('사용자 정보가 일치하지 않습니다.')
             else:
                 # timedelta를 사용하여 만료기간을 설정할 수 있음
-                return {'access_token': create_access_token(identity=user_info, expires_delta=timedelta(minutes=5))}
+                return {
+                    # access_token : 5분
+                    'access_token': create_access_token(identity=user_info, expires_delta=timedelta(minutes=5)),
+                    # refresh_token : 1시간
+                    'refresh_token': create_refresh_token(identity=user_info, expires_delta=timedelta(hours=1))
+                }, int(HTTPStatus.OK)
         else:
             raise Unauthorized('사용자 정보가 일치하지 않습니다.')
 
     @jwt_required()
-    @login_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.error_model)
+    # security 설정으로 좌물쇠 버튼을 각각 따로 보여줄 수 있음
+    @login_sample.doc(security='bearer_auth')
     @login_sample.marshal_with(_Schema.user_detail_model, code=int(HTTPStatus.OK), description='사용자 상세정보')
     def get(self):
         """
@@ -104,9 +120,48 @@ class LoginPost(Resource):
         return current_user, int(HTTPStatus.OK)
 
 
+@refresh_sample.route('')
+@refresh_sample.doc(security='bearer_auth')
+@refresh_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
+@refresh_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
+@refresh_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
+class RefreshPost(Resource):
+    """
+    JWT TOKEN Refresh
+    """
+    # We are using the `refresh=True` options in jwt_required to only allow
+    # refresh tokens to access this route.
+    # Refresh Token 이 아닌경우 WrongTokenError 발생
+    @jwt_required(refresh=True)
+    @refresh_sample.marshal_with(_Schema.jwt_token_refresh_model, code=int(HTTPStatus.OK), description='JWT TOKEN Refresh 정보')
+    def post(self):
+        """
+        JWT TOKEN Refresh
+        :return:
+        :rtype:
+        """
+        # access_token 의 identity 값은 사용자의 전체 정보이므로 get_jwt_identity 으로 JWT TOKEN 에서 가져온 sub 정보와는 다름
+        # current_user 정보를 사용해야 하는것으로 보임
+        return {
+            # access_token : 5분
+            'access_token': create_access_token(identity=current_user, expires_delta=timedelta(minutes=5))
+        }, int(HTTPStatus.OK)
+
+    @jwt_required(refresh=True)
+    @refresh_sample.marshal_with(_Schema.user_detail_model, code=int(HTTPStatus.OK), description='사용자 상세정보')
+    def get(self):
+        """
+        Refresh TOKEN 정보 확인
+        :return:
+        :rtype:
+        """
+        return current_user, int(HTTPStatus.OK)
+
+
 @user_sample.route('')
+@user_sample.doc(security='bearer_auth')
 @user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.error_model)
-@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.error_model)
+@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
 @user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
 @user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
 class UserPost(Resource):
@@ -141,8 +196,9 @@ class UserPost(Resource):
 
 
 @user_sample.route('/<int:user_seq>')
+@user_sample.doc(security='bearer_auth')
 @user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.error_model)
-@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.error_model)
+@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
 @user_sample.response(int(HTTPStatus.NOT_FOUND), '사용자 없음', app.system_error_model)
 @user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
 @user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
