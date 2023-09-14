@@ -17,6 +17,7 @@ def admin_required():
     def wrapper(fn):
         @wraps(fn)
         def decorator(*args, **kwargs):
+            # flask_jwt_extended.verify_jwt_in_request() can be used to build your own decorators. This is the same function used by flask_jwt_extended.jwt_required().
             verify_jwt_in_request()
             claims = get_jwt()
             if claims['aud'] == 'ADMIN':
