@@ -1,6 +1,6 @@
 import logging
 
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, NotFound
 
 from ..configs import PROJECT_ID
 from ..datasources import Sqlite3
@@ -59,7 +59,7 @@ class UsersService:
         :return:
         """
         result = Sqlite3().cmd('INSERT INTO USERS (USER_ID, USER_PW, USER_NAME, RDATE, MDATE) VALUES (?, ?, ?, DATETIME(\'now\', \'localtime\'), DATETIME(\'now\', \'localtime\'))',
-                               (user_id, user_pw, user_name))
+                               (user_id, user_pw, user_name), True)
         return result
 
     @staticmethod
@@ -104,14 +104,17 @@ class UsersService:
         """
         if user_seq:
             user_info = self.get_user_by_seq(user_seq)
+            if not user_info:
+                raise NotFound('사용자가 존재하지 않습니다.')
         else:
             user_info = None
         if user_info:
             result = self._update_user(user_seq, user_id, user_pw, user_name)
         else:
             result = self._insert_user(user_id, user_pw, user_name)
-        if result != 1:
+        if result < 1:
             raise SystemError('Save User Error')
+        return result
 
     @staticmethod
     def _delete_users(user_seq_list):

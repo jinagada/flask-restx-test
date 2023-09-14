@@ -175,6 +175,8 @@ def user_lookup_loader(_jwt_header, jwt_data):
     TOKEN 정보가 사용될 경우에만 호출됨
     TOKEN 만료시간이 지나면 ExpiredSignatureError 가 자동으로 발생함
     JWT 정보에서 실제 사용자 정보를 조회
+    사용자 정보에 문제가 있는 경우에 대한 모든 처리가 가능함
+    기본적으로 사용자 정보가 조회되지 않으면 오류(UserLookupError)를 발생시킴
     :param _jwt_header:
     :type _jwt_header:
     :param jwt_data:

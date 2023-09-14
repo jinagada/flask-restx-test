@@ -2,9 +2,9 @@ import logging
 from datetime import timedelta
 from http import HTTPStatus
 
-from flask_jwt_extended import create_access_token, jwt_required
+from flask_jwt_extended import create_access_token, jwt_required, current_user
 from flask_restx import Namespace, Resource, fields, reqparse
-from werkzeug.exceptions import Unauthorized
+from werkzeug.exceptions import Unauthorized, NotFound
 
 import app
 from ..configs import PROJECT_ID
@@ -53,6 +53,11 @@ class _Schema:
         'result': fields.String(description='결과', example='Success'),
         'user_seq': fields.Integer(description='사용자 번호', example=1)
     })
+    # 사용자 삭제 결과
+    user_delete_result_model = user_sample.model('UserDeleteResult', {
+        'result': fields.String(description='결과', example='Success'),
+        'deleted_count': fields.Integer(description='삭제된 사용자수', example=1)
+    })
     # 사용자 목록 모델
     user_list_model = user_sample.model('UserListResult', {
         'totalcount': fields.Integer(description='사용자 전체 수', example=100),
@@ -71,6 +76,11 @@ class LoginPost(Resource):
     @login_sample.expect(_Schema.login_model, validate=True)
     @login_sample.marshal_with(_Schema.jwt_token_model, code=int(HTTPStatus.OK), description='JWT TOKEN 정보')
     def post(self):
+        """
+        로그인
+        :return:
+        :rtype:
+        """
         args = login_sample.payload
         user_info = UsersService().get_user_by_id(args['user_id'])
         if user_info:
@@ -82,9 +92,21 @@ class LoginPost(Resource):
         else:
             raise Unauthorized('사용자 정보가 일치하지 않습니다.')
 
+    @jwt_required()
+    @login_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.error_model)
+    @login_sample.marshal_with(_Schema.user_detail_model, code=int(HTTPStatus.OK), description='사용자 상세정보')
+    def get(self):
+        """
+        로그인한 사용자의 current_user 정보 확인
+        :return:
+        :rtype:
+        """
+        return current_user, int(HTTPStatus.OK)
+
 
 @user_sample.route('')
 @user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.error_model)
+@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.error_model)
 @user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
 @user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
 class UserPost(Resource):
@@ -116,3 +138,65 @@ class UserPost(Resource):
         args = user_sample.payload
         result = UsersService().save_user(args['user_id'], args['password'], args['user_name'], None)
         return {'result': 'Success', 'user_seq': result}, int(HTTPStatus.OK)
+
+
+@user_sample.route('/<int:user_seq>')
+@user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.error_model)
+@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.error_model)
+@user_sample.response(int(HTTPStatus.NOT_FOUND), '사용자 없음', app.system_error_model)
+@user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
+@user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
+class UserSample(Resource):
+    """
+    사용자 상세보기, 수정, 삭제
+    """
+    @jwt_required()
+    @user_sample.marshal_with(_Schema.user_detail_model, code=int(HTTPStatus.OK), description='사용자 상세정보')
+    def get(self, user_seq):
+        """
+        사용자 상세보기
+        :param user_seq:
+        :type user_seq:
+        :return:
+        :rtype:
+        """
+        if user_seq != current_user['SEQ']:
+            raise Unauthorized('로그인한 사용자의 정보만 조회 할 수 있습니다.')
+        result = UsersService().get_user_by_seq(user_seq)
+        if not result:
+            raise NotFound('사용자가 존재하지 않습니다.')
+        return result, int(HTTPStatus.OK)
+
+    @jwt_required()
+    @user_sample.expect(_Schema.user_save_model, validate=True)
+    @user_sample.marshal_with(_Schema.user_detail_model, code=int(HTTPStatus.OK), description='사용자 상세정보')
+    def put(self, user_seq):
+        """
+        사용자 정보 수정
+        :param user_seq:
+        :type user_seq:
+        :return:
+        :rtype:
+        """
+        if user_seq != current_user['SEQ']:
+            raise Unauthorized('로그인한 사용자의 정보만 수정 할 수 있습니다.')
+        args = user_sample.payload
+        user_service = UsersService()
+        user_service.save_user(args['user_id'], args['password'], args['user_name'], user_seq)
+        result = user_service.get_user_by_seq(user_seq)
+        return result, int(HTTPStatus.OK)
+
+    @jwt_required()
+    @user_sample.marshal_with(_Schema.user_delete_result_model, code=int(HTTPStatus.OK), description='사용자 삭제결과')
+    def delete(self, user_seq):
+        """
+        사용자 삭제
+        :param user_seq:
+        :type user_seq:
+        :return:
+        :rtype:
+        """
+        if user_seq != current_user['SEQ']:
+            raise Unauthorized('로그인한 사용자의 정보만 삭제 할 수 있습니다.')
+        result = UsersService().check_delete_users([user_seq])
+        return {'result': 'Success', 'deleted_count': result}, int(HTTPStatus.OK)
