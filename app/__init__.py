@@ -10,7 +10,7 @@ from flask_jwt_extended import JWTManager
 from flask_jwt_extended.exceptions import NoAuthorizationError, UserLookupError, WrongTokenError
 from flask_restx import Api, apidoc, fields
 from jwt.exceptions import ExpiredSignatureError
-from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllowed, NotFound, Unauthorized
+from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllowed, NotFound, Unauthorized, Forbidden
 
 from .configs import PROJECT_ID
 from .services import Sqlite3Service, UsersService
@@ -23,7 +23,8 @@ logger = logging.getLogger(PROJECT_ID)
 # Flask 생성
 app = Flask(__name__)
 # JWT 설정
-app.config["JWT_SECRET_KEY"] = "HS256"
+# JWT_SECRET_KEY 값은 암호화에 사용되므로 32자 이상의 해시값을 사용할것!
+app.config["JWT_SECRET_KEY"] = "3c15ea2011adbc1f764c956ed9f0bbb6dc51d15b815590e45bfb52cc0fc15d2d"
 jwt = JWTManager(app)
 # api 기본 URL 변경 : /api/v1
 api_path = Blueprint('api', __name__, url_prefix='/api/v1')
@@ -70,7 +71,7 @@ def api_doc():
     :return:
     :rtype:
     """
-    if g.env_val != 'local':
+    if g.env_val == 'prd':
         raise NotFound('운영에서는 문서를 제공하지 않음')
     return apidoc.ui_for(api)
 
@@ -118,6 +119,13 @@ def handle_400_exception(error):
 def handle_401_exception(error):
     err_log(logger, error, __name__, traceback.format_exc(), '401 Unauthorized')
     return {'message': str(error)}, int(HTTPStatus.UNAUTHORIZED)
+
+
+@api.errorhandler(Forbidden)
+@api.marshal_with(system_error_model, code=int(HTTPStatus.FORBIDDEN), description='403 오류')
+def handle_403_exception(error):
+    err_log(logger, error, __name__, traceback.format_exc(), '403 Forbidden')
+    return {'message': str(error)}, int(HTTPStatus.FORBIDDEN)
 
 
 @api.errorhandler(NotFound)

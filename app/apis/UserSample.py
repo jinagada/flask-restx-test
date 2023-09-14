@@ -2,13 +2,14 @@ import logging
 from datetime import timedelta
 from http import HTTPStatus
 
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, current_user
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, current_user, get_jwt
 from flask_restx import Namespace, Resource, fields, reqparse
 from werkzeug.exceptions import Unauthorized, NotFound
 
 import app
 from ..configs import PROJECT_ID
 from ..services import UsersService
+from ..utils import admin_required
 
 login_sample = Namespace(
     path='/login',
@@ -73,6 +74,11 @@ class _Schema:
         'totalcount': fields.Integer(description='사용자 전체 수', example=100),
         'user_list': fields.List(fields.Nested(user_detail_model, skip_none=True))
     })
+    # current_user 및 권한 모델
+    jwt_login_info_model = login_sample.model('JWTLoginInfo', {
+        'current_user': fields.Nested(user_detail_model, skip_none=True),
+        'claims': fields.Raw(description='JWT TOKEN 상세내용', example='dict 형식의 상세내용')
+    })
 
 
 @login_sample.route('')
@@ -97,10 +103,15 @@ class LoginPost(Resource):
             if user_info['USER_PW'] != args['password']:
                 raise Unauthorized('사용자 정보가 일치하지 않습니다.')
             else:
+                # 권한정보 추가
+                if user_info['SEQ'] == 1:
+                    additional_claims = {'aud': 'ADMIN'}
+                else:
+                    additional_claims = {'aud': 'USER'}
                 # timedelta를 사용하여 만료기간을 설정할 수 있음
                 return {
                     # access_token : 5분
-                    'access_token': create_access_token(identity=user_info, expires_delta=timedelta(minutes=5)),
+                    'access_token': create_access_token(identity=user_info, additional_claims=additional_claims, expires_delta=timedelta(minutes=5)),
                     # refresh_token : 1시간
                     'refresh_token': create_refresh_token(identity=user_info, expires_delta=timedelta(hours=1))
                 }, int(HTTPStatus.OK)
@@ -110,14 +121,14 @@ class LoginPost(Resource):
     @jwt_required()
     # security 설정으로 좌물쇠 버튼을 각각 따로 보여줄 수 있음
     @login_sample.doc(security='bearer_auth')
-    @login_sample.marshal_with(_Schema.user_detail_model, code=int(HTTPStatus.OK), description='사용자 상세정보')
+    @login_sample.marshal_with(_Schema.jwt_login_info_model, code=int(HTTPStatus.OK), description='JWT TOKEN Login 정보')
     def get(self):
         """
-        로그인한 사용자의 current_user 정보 확인
+        로그인한 사용자의 current_user 및 JWT TOKEN 정보 확인
         :return:
         :rtype:
         """
-        return current_user, int(HTTPStatus.OK)
+        return {'current_user': current_user, 'claims': get_jwt()}, int(HTTPStatus.OK)
 
 
 @refresh_sample.route('')
@@ -142,9 +153,14 @@ class RefreshPost(Resource):
         """
         # access_token 의 identity 값은 사용자의 전체 정보이므로 get_jwt_identity 으로 JWT TOKEN 에서 가져온 sub 정보와는 다름
         # current_user 정보를 사용해야 하는것으로 보임
+        # 권한정보 추가
+        if current_user['SEQ'] == 1:
+            additional_claims = {'aud': 'ADMIN'}
+        else:
+            additional_claims = {'aud': 'USER'}
         return {
             # access_token : 5분
-            'access_token': create_access_token(identity=current_user, expires_delta=timedelta(minutes=5))
+            'access_token': create_access_token(identity=current_user, additional_claims=additional_claims, expires_delta=timedelta(minutes=5))
         }, int(HTTPStatus.OK)
 
     @jwt_required(refresh=True)
@@ -181,7 +197,8 @@ class UserPost(Resource):
         (user_list, totalcount) = UsersService().get_user_list(args['start_row'], args['row_per_page'])
         return {'user_list': user_list, 'totalcount': totalcount}, int(HTTPStatus.OK)
 
-    @jwt_required()
+    @admin_required()
+    @user_sample.response(int(HTTPStatus.FORBIDDEN), '권한 오류', app.system_error_model)
     @user_sample.expect(_Schema.user_save_model, validate=True)
     @user_sample.marshal_with(_Schema.user_save_result_model, code=int(HTTPStatus.OK), description='사용자 등록결과')
     def post(self):
