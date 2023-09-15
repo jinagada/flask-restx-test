@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from pathlib import Path
 
-from flask import Flask, Blueprint, g
+from flask import Flask, Blueprint, g, request
+from flask_babel import Babel, gettext
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended.exceptions import NoAuthorizationError, UserLookupError, WrongTokenError
 from flask_restx import Api, apidoc, fields
@@ -22,6 +23,10 @@ env_val = None
 logger = logging.getLogger(PROJECT_ID)
 # Flask 생성
 app = Flask(__name__)
+# Babel 생성
+babel = Babel()
+# Babel locale 기본값을 한국어(ko)로 설정
+app.config['BABEL_DEFAULT_LOCALE'] = 'ko'
 # JWT 설정
 # JWT_SECRET_KEY 값은 암호화에 사용되므로 32자 이상의 해시값을 사용할것!
 app.config["JWT_SECRET_KEY"] = "3c15ea2011adbc1f764c956ed9f0bbb6dc51d15b815590e45bfb52cc0fc15d2d"
@@ -72,7 +77,7 @@ def api_doc():
     :rtype:
     """
     if g.env_val == 'prd':
-        raise NotFound('운영에서는 문서를 제공하지 않음')
+        raise NotFound(gettext(u'운영에서는 문서를 제공하지 않음'))
     return apidoc.ui_for(api)
 
 
@@ -208,6 +213,18 @@ def user_lookup_loader(_jwt_header, jwt_data):
     return user_info
 
 
+def get_locale():
+    """
+    Flask-Babel locale 가져오기 설정
+    request Header의 Accept-Language 값을 참고하도록 처리
+    :return:
+    :rtype:
+    """
+    locale_str = request.accept_languages.best_match(['ko', 'en', 'ja', 'zh'])
+    logger.info(f'request Accept-Language: {locale_str}')
+    return locale_str
+
+
 def register_router(api_param):
     """
     API router 설정
@@ -248,6 +265,8 @@ def init_app(env):
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
         logger.setLevel(logging.DEBUG if env == 'local' else logging.INFO)
+        # Flask-Babel 초기화 및 locale_selector 설정
+        babel.init_app(app, locale_selector=get_locale)
         # router 설정
         register_router(api)
         # Sqlite 초기 설정

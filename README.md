@@ -9,10 +9,12 @@
 * flask-restx 1.0.6
 * Sqlite 3.43.0
 * flask-jwt-extended 4.5.2
+* flask-babel 3.1.0
 
 # 참고 문서
 - [Welcome to Flask-RESTX’s documentation!](https://flask-restx.readthedocs.io/en/latest/index.html)
 - [Flask-JWT-Extended’s Documentation](https://flask-jwt-extended.readthedocs.io/en/stable/)
+- [Flask-Babel](https://python-babel.github.io/flask-babel/)
 - [Welcome to Flask(English)](https://flask-docs.readthedocs.io/en/latest/)
 - [Welcome to Flask(Korean)](https://flask-docs-kr.readthedocs.io/ko/latest/)
 
@@ -84,3 +86,65 @@ $ sudo vi /etc/logrotate.d/flask-restx-test
 
 ## 소스에 설정된 ApiDoc URL
 * URL : http://localhost:5000/api/v1/docs
+
+## Flask-Babel
+
+1. 소스에 각 메시지 작성
+
+```python
+raise NotFound(gettext(u'게시물이 존재하지 않습니다.'))
+```
+
+2. babel.cfg 파일 생성
+
+```text
+[python: **.py]
+[jinja2: **/templates/**.html]
+extensions=jinja2.ext.autoescape,jinja2.ext.with_
+```
+
+3. .pot 파일 생성
+
+```bash
+$ cd app
+$ pybabel extract -F babel.cfg -o messages.pot .
+```
+
+4. 언어별 디렉토리 및 언어별 .po 파일 생성
+
+```bash
+$ pybabel init -i messages.pot -d ./translations -l ko
+$ pybabel init -i messages.pot -d ./translations -l en
+$ pybabel init -i messages.pot -d ./translations -l ja
+$ pybabel init -i messages.pot -d ./translations -l zh
+```
+
+5. .po 파일에 번역 작성하기
+
+```text
+#: apis/BoardSample.py:184 apis/BoardSample.py:220 apis/BoardSample.py:280
+#: apis/BoardSample.py:300 services/BoardService.py:99
+msgid "게시물이 존재하지 않습니다."
+msgstr "This post does not exist."
+```
+
+6. 컴파일 하기 : .mo 파일 생성
+
+```bash
+$ pybabel compile -f -d ./translations
+```
+
+7. 소스의 변경사항 처리
+   1. .pot 파일 재생성
+   ```bash
+   $ cd app
+   $ pybabel extract -F babel.cfg -o messages.pot .
+   ```
+   2. .po 파일 갱신처리
+   ```bash
+   $ pybabel update -i messages.pot -d ./translations
+   ```
+   3. 컴파일 하기
+   ```bash
+   $ pybabel compile -f -d ./translations
+   ```

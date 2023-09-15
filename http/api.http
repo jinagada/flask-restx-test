@@ -1,9 +1,10 @@
 ### UserSample - /login
 POST {{hosts}}/login
+#Accept-Language: en
 Content-Type: application/json; charset=UTF-8
 
 {
-  "user_id": "UserId2",
+  "user_id": "UserId2a",
   "password": "1234!"
 }
 

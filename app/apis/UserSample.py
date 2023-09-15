@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 from http import HTTPStatus
 
+from flask_babel import gettext
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, current_user, get_jwt
 from flask_restx import Namespace, Resource, fields, reqparse
 from werkzeug.exceptions import Unauthorized, NotFound
@@ -101,7 +102,7 @@ class LoginPost(Resource):
         user_info = UsersService().get_user_by_id(args['user_id'])
         if user_info:
             if user_info['USER_PW'] != args['password']:
-                raise Unauthorized('사용자 정보가 일치하지 않습니다.')
+                raise Unauthorized(gettext(u'사용자 정보가 일치하지 않습니다.'))
             else:
                 # 권한정보 추가
                 if user_info['SEQ'] == 1:
@@ -116,7 +117,7 @@ class LoginPost(Resource):
                     'refresh_token': create_refresh_token(identity=user_info, expires_delta=timedelta(hours=1))
                 }, int(HTTPStatus.OK)
         else:
-            raise Unauthorized('사용자 정보가 일치하지 않습니다.')
+            raise Unauthorized(gettext(u'사용자 정보가 일치하지 않습니다.'))
 
     @jwt_required()
     # security 설정으로 좌물쇠 버튼을 각각 따로 보여줄 수 있음
@@ -234,10 +235,10 @@ class UserSample(Resource):
         :rtype:
         """
         if user_seq != current_user['SEQ']:
-            raise Unauthorized('로그인한 사용자의 정보만 조회 할 수 있습니다.')
+            raise Unauthorized(gettext(u'로그인한 사용자의 정보만 조회 할 수 있습니다.'))
         result = UsersService().get_user_by_seq(user_seq)
         if not result:
-            raise NotFound('사용자가 존재하지 않습니다.')
+            raise NotFound(gettext(u'사용자가 존재하지 않습니다.'))
         return result, int(HTTPStatus.OK)
 
     @jwt_required()
@@ -252,7 +253,7 @@ class UserSample(Resource):
         :rtype:
         """
         if user_seq != current_user['SEQ']:
-            raise Unauthorized('로그인한 사용자의 정보만 수정 할 수 있습니다.')
+            raise Unauthorized(gettext(u'로그인한 사용자의 정보만 수정 할 수 있습니다.'))
         args = user_sample.payload
         user_service = UsersService()
         user_service.save_user(args['user_id'], args['password'], args['user_name'], user_seq)
@@ -270,6 +271,6 @@ class UserSample(Resource):
         :rtype:
         """
         if user_seq != current_user['SEQ']:
-            raise Unauthorized('로그인한 사용자의 정보만 삭제 할 수 있습니다.')
+            raise Unauthorized(gettext(u'로그인한 사용자의 정보만 삭제 할 수 있습니다.'))
         result = UsersService().check_delete_users([user_seq])
         return {'result': 'Success', 'deleted_count': result}, int(HTTPStatus.OK)

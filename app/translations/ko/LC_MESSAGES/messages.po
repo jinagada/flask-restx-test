@@ -1,0 +1,57 @@
+# Korean translations for PROJECT.
+# Copyright (C) 2023 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2023-09-15 15:04+0900\n"
+"PO-Revision-Date: 2023-09-15 14:58+0900\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: ko\n"
+"Language-Team: ko <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: __init__.py:79
+msgid "운영에서는 문서를 제공하지 않음"
+msgstr ""
+
+#: apis/BoardSample.py:184 apis/BoardSample.py:220 apis/BoardSample.py:280
+#: apis/BoardSample.py:300 services/BoardService.py:99
+msgid "게시물이 존재하지 않습니다."
+msgstr ""
+
+#: apis/UserSample.py:105 apis/UserSample.py:120
+msgid "사용자 정보가 일치하지 않습니다."
+msgstr ""
+
+#: apis/UserSample.py:238
+msgid "로그인한 사용자의 정보만 조회 할 수 있습니다."
+msgstr ""
+
+#: apis/UserSample.py:241 services/UsersService.py:109
+msgid "사용자가 존재하지 않습니다."
+msgstr ""
+
+#: apis/UserSample.py:256
+msgid "로그인한 사용자의 정보만 수정 할 수 있습니다."
+msgstr ""
+
+#: apis/UserSample.py:274
+msgid "로그인한 사용자의 정보만 삭제 할 수 있습니다."
+msgstr ""
+
+#: services/UsersService.py:139
+msgid "사용자를 전부 삭제 할 수는 없습니다."
+msgstr ""
+
+#: utils/Decorator.py:27
+msgid "ADMIN 권한이 필요합니다."
+msgstr ""
+

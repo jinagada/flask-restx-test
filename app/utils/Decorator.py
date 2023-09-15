@@ -1,5 +1,6 @@
 from functools import wraps
 
+from flask_babel import gettext
 from flask_jwt_extended import verify_jwt_in_request, get_jwt
 from werkzeug.exceptions import Forbidden
 
@@ -23,6 +24,6 @@ def admin_required():
             if claims['aud'] == 'ADMIN':
                 return fn(*args, **kwargs)
             else:
-                raise Forbidden('ADMIN 권한이 필요합니다.')
+                raise Forbidden(gettext(u'ADMIN 권한이 필요합니다.'))
         return decorator
     return wrapper

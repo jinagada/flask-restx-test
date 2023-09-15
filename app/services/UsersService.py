@@ -1,5 +1,6 @@
 import logging
 
+from flask_babel import gettext
 from werkzeug.exceptions import BadRequest, NotFound
 
 from ..configs import PROJECT_ID
@@ -105,7 +106,7 @@ class UsersService:
         if user_seq:
             user_info = self.get_user_by_seq(user_seq)
             if not user_info:
-                raise NotFound('사용자가 존재하지 않습니다.')
+                raise NotFound(gettext(u'사용자가 존재하지 않습니다.'))
         else:
             user_info = None
         if user_info:
@@ -135,7 +136,7 @@ class UsersService:
         """
         _, totalcount = self.get_user_list(0, 10)
         if totalcount < 2 or totalcount == len(user_seq_list):
-            raise BadRequest('사용자를 전부 삭제 할 수 없습니다.')
+            raise BadRequest(gettext(u'사용자를 전부 삭제 할 수는 없습니다.'))
         else:
             result = self._delete_users(user_seq_list)
         return result

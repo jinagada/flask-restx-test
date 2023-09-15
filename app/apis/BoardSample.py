@@ -4,6 +4,7 @@ import uuid
 from http import HTTPStatus
 
 from flask import g
+from flask_babel import gettext
 from flask_jwt_extended import jwt_required, current_user, get_jwt_identity
 from flask_restx import Namespace, Resource, fields, reqparse
 from werkzeug.datastructures import FileStorage
@@ -180,7 +181,7 @@ class BoardSample(Resource):
         """
         result = BoardService().get_board_by_seq(board_seq)
         if not result:
-            raise NotFound('게시물이 존재하지 않습니다.')
+            raise NotFound(gettext(u'게시물이 존재하지 않습니다.'))
         return result, int(HTTPStatus.OK)
 
     @jwt_required()
@@ -216,7 +217,7 @@ class BoardSample(Resource):
         """
         result = BoardService().delete_boards([board_seq])
         if result < 1:
-            raise NotFound('게시물이 존재하지 않습니다.')
+            raise NotFound(gettext(u'게시물이 존재하지 않습니다.'))
         return {'result': 'Success', 'deleted_count': result}, int(HTTPStatus.OK)
 
 
@@ -276,7 +277,7 @@ class BoardFilePost(Resource):
         """
         result = BoardService().get_board_by_seq(board_seq)
         if not result:
-            raise NotFound('게시물이 존재하지 않습니다.')
+            raise NotFound(gettext(u'게시물이 존재하지 않습니다.'))
         # 파일 목록 조회
         result = BoardService().get_board_file_list(board_seq)
         return {'board_seq': board_seq, 'file_list': result}, int(HTTPStatus.OK)
@@ -296,7 +297,7 @@ class BoardFilePost(Resource):
         """
         result = BoardService().get_board_by_seq(board_seq)
         if not result:
-            raise NotFound('게시물이 존재하지 않습니다.')
+            raise NotFound(gettext(u'게시물이 존재하지 않습니다.'))
         args = board_sample.payload
         # 파일 목록을 변수에 맞춰 매핑
         file_seqs = []
