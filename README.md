@@ -88,8 +88,21 @@ $ sudo vi /etc/logrotate.d/flask-restx-test
 * URL : http://localhost:5000/api/v1/docs
 
 ## Flask-Babel
+### 기본 locale 설정
+
+```python
+# Flask 생성
+app = Flask(__name__)
+# Babel 생성
+babel = Babel()
+# Babel locale 기본값을 한국어(ko)로 설정
+app.config['BABEL_DEFAULT_LOCALE'] = 'ko'
+```
+
+### 작업순서
 
 1. 소스에 각 메시지 작성
+   * 기본 locale 로 설정한 언어로 메시지를 작성 할 것
 
 ```python
 raise NotFound(gettext(u'게시물이 존재하지 않습니다.'))
@@ -111,9 +124,9 @@ $ pybabel extract -F babel.cfg -o messages.pot .
 ```
 
 4. 언어별 디렉토리 및 언어별 .po 파일 생성
+   * 기본 locale 을 설정한 경우 해당 메시지는 gettext에 작성된 메시지로 보여짐
 
 ```bash
-$ pybabel init -i messages.pot -d ./translations -l ko
 $ pybabel init -i messages.pot -d ./translations -l en
 $ pybabel init -i messages.pot -d ./translations -l ja
 $ pybabel init -i messages.pot -d ./translations -l zh
@@ -134,17 +147,22 @@ msgstr "This post does not exist."
 $ pybabel compile -f -d ./translations
 ```
 
-7. 소스의 변경사항 처리
-   1. .pot 파일 재생성
-   ```bash
-   $ cd app
-   $ pybabel extract -F babel.cfg -o messages.pot .
-   ```
-   2. .po 파일 갱신처리
-   ```bash
-   $ pybabel update -i messages.pot -d ./translations
-   ```
-   3. 컴파일 하기
-   ```bash
-   $ pybabel compile -f -d ./translations
-   ```
+### 소스의 변경사항 처리
+1. .pot 파일 재생성
+
+```bash
+$ cd app
+$ pybabel extract -F babel.cfg -o messages.pot .
+```
+
+2. .po 파일 갱신처리
+
+```bash
+$ pybabel update -i messages.pot -d ./translations
+```
+
+3. 컴파일 하기
+
+```bash
+$ pybabel compile -f -d ./translations
+```
