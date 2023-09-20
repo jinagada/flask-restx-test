@@ -4,7 +4,7 @@ POST {{hosts}}/login
 Content-Type: application/json; charset=UTF-8
 
 {
-  "user_id": "UserId2a",
+  "user_id": "UserId2",
   "password": "1234!"
 }
 

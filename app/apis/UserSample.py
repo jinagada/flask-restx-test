@@ -111,9 +111,9 @@ class LoginPost(Resource):
                     additional_claims = {'aud': 'USER'}
                 # timedelta를 사용하여 만료기간을 설정할 수 있음
                 return {
-                    # access_token : 5분
+                    # access_token : 5분(사용자의 인증정보 및 권한 정보를 가진 짧은 주기의 토큰으로 임시저장소에 저장됨)
                     'access_token': create_access_token(identity=user_info, additional_claims=additional_claims, expires_delta=timedelta(minutes=5)),
-                    # refresh_token : 1시간
+                    # refresh_token : 1시간(사용자의 인증에 대한 갱신을 위한 긴 주기의 토큰으로 안전한 저장소에 저장됨)
                     'refresh_token': create_refresh_token(identity=user_info, expires_delta=timedelta(hours=1))
                 }, int(HTTPStatus.OK)
         else:
@@ -144,6 +144,7 @@ class RefreshPost(Resource):
     # We are using the `refresh=True` options in jwt_required to only allow
     # refresh tokens to access this route.
     # Refresh Token 이 아닌경우 WrongTokenError 발생
+    # refresh=True 옵션이 없는경우 기본적으로 access_token만을 허용함
     @jwt_required(refresh=True)
     @refresh_sample.marshal_with(_Schema.jwt_token_refresh_model, code=int(HTTPStatus.OK), description='JWT TOKEN Refresh 정보')
     def post(self):
