@@ -236,6 +236,7 @@ def register_router(api_param):
     """
     # Namespace 객체가 import 되어야함
     from .apis import login_sample, refresh_sample, board_sample, user_sample
+    # 추가된 순서대로 Swagger 문서가 생성되는것으로 보임
     api_param.add_namespace(login_sample)
     api_param.add_namespace(refresh_sample)
     api_param.add_namespace(board_sample)
