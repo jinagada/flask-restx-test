@@ -107,6 +107,7 @@ def handle_404_error(error):
 
 
 # 등록된 순서대로 처리되므로 500 오류를 가장 마지막에 등록할것!!
+# http status code : https://ko.wikipedia.org/wiki/HTTP_%EC%83%81%ED%83%9C_%EC%BD%94%EB%93%9C
 @api.errorhandler(BadRequest)
 @api.marshal_with(error_model, code=int(HTTPStatus.BAD_REQUEST), description='400 오류')
 def handle_400_exception(error):
