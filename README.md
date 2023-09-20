@@ -94,7 +94,7 @@ $ sudo vi /etc/logrotate.d/flask-restx-test
 # Flask 생성
 app = Flask(__name__)
 # Babel 생성
-babel = Babel()
+babel = Babel(app)
 # Babel locale 기본값을 한국어(ko)로 설정
 app.config['BABEL_DEFAULT_LOCALE'] = 'ko'
 ```
