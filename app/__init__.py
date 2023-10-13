@@ -102,7 +102,7 @@ def handle_404_error(error):
     :return:
     :rtype:
     """
-    err_log(logger, error, __name__, traceback.format_exc(), '404 File Not Found')
+    err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.NOT_FOUND.description)
     return {'message': str(error)}, int(HTTPStatus.NOT_FOUND)
 
 
@@ -111,7 +111,7 @@ def handle_404_error(error):
 @api.errorhandler(BadRequest)
 @api.marshal_with(error_model, code=int(HTTPStatus.BAD_REQUEST), description='400 오류')
 def handle_400_exception(error):
-    err_log(logger, error, __name__, traceback.format_exc(), '400 Bad Request')
+    err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.BAD_REQUEST.description)
     return {'message': str(error)}, int(HTTPStatus.BAD_REQUEST)
 
 
@@ -123,14 +123,14 @@ def handle_400_exception(error):
 @api.errorhandler(UserLookupError)
 @api.marshal_with(system_error_model, code=int(HTTPStatus.UNAUTHORIZED), description='401 오류')
 def handle_401_exception(error):
-    err_log(logger, error, __name__, traceback.format_exc(), '401 Unauthorized')
+    err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.UNAUTHORIZED.description)
     return {'message': str(error)}, int(HTTPStatus.UNAUTHORIZED)
 
 
 @api.errorhandler(Forbidden)
 @api.marshal_with(system_error_model, code=int(HTTPStatus.FORBIDDEN), description='403 오류')
 def handle_403_exception(error):
-    err_log(logger, error, __name__, traceback.format_exc(), '403 Forbidden')
+    err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.FORBIDDEN.description)
     return {'message': str(error)}, int(HTTPStatus.FORBIDDEN)
 
 
@@ -144,28 +144,28 @@ def handle_404_exception(error):
     :return:
     :rtype:
     """
-    err_log(logger, error, __name__, traceback.format_exc(), '404 File Not Found')
+    err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.NOT_FOUND.description)
     return {'message': str(error)}, int(HTTPStatus.NOT_FOUND)
 
 
 @api.errorhandler(MethodNotAllowed)
 @api.marshal_with(system_error_model, code=int(HTTPStatus.METHOD_NOT_ALLOWED), description='405 오류')
 def handle_405_exception(error):
-    err_log(logger, error, __name__, traceback.format_exc(), '405 Method Not Allowed')
+    err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.METHOD_NOT_ALLOWED.description)
     return {'message': str(error)}, int(HTTPStatus.METHOD_NOT_ALLOWED)
 
 
 @api.errorhandler(RequestEntityTooLarge)
 @api.marshal_with(system_error_model, code=int(HTTPStatus.REQUEST_ENTITY_TOO_LARGE), description='413 오류')
 def handle_413_exception(error):
-    err_log(logger, error, __name__, traceback.format_exc(), '413 Request Entity Too Large')
+    err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.REQUEST_ENTITY_TOO_LARGE.description)
     return {'message': str(error)}, int(HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
 
 
 @api.errorhandler(Exception)
 @api.marshal_with(system_error_model, code=int(HTTPStatus.INTERNAL_SERVER_ERROR), description='500 오류')
 def handle_500_exception(error):
-    err_log(logger, error, __name__, traceback.format_exc(), '500 Server Error')
+    err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.INTERNAL_SERVER_ERROR.description)
     return {'message': str(error)}, int(HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
