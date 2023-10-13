@@ -83,9 +83,9 @@ class _Schema:
 
 
 @login_sample.route('')
-@login_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
-@login_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
-@login_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
+@login_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
+@login_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
+@login_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
 class LoginPost(Resource):
     """
     사용자 로그인
@@ -134,9 +134,9 @@ class LoginPost(Resource):
 
 @refresh_sample.route('')
 @refresh_sample.doc(security='bearer_auth')
-@refresh_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
-@refresh_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
-@refresh_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
+@refresh_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
+@refresh_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
+@refresh_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
 class RefreshPost(Resource):
     """
     JWT TOKEN Refresh
@@ -178,10 +178,10 @@ class RefreshPost(Resource):
 
 @user_sample.route('')
 @user_sample.doc(security='bearer_auth')
-@user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.error_model)
-@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
-@user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
-@user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
+@user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
 class UserPost(Resource):
     """
     사용자 목록, 등록
@@ -200,7 +200,7 @@ class UserPost(Resource):
         return {'user_list': user_list, 'totalcount': totalcount}, int(HTTPStatus.OK)
 
     @admin_required()
-    @user_sample.response(int(HTTPStatus.FORBIDDEN), '권한 오류', app.system_error_model)
+    @user_sample.response(int(HTTPStatus.FORBIDDEN), '권한 오류', app.default_error_model)
     @user_sample.expect(_Schema.user_save_model, validate=True)
     @user_sample.marshal_with(_Schema.user_save_result_model, code=int(HTTPStatus.OK), description='사용자 등록결과')
     def post(self):
@@ -216,11 +216,11 @@ class UserPost(Resource):
 
 @user_sample.route('/<int:user_seq>')
 @user_sample.doc(security='bearer_auth')
-@user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.error_model)
-@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.system_error_model)
-@user_sample.response(int(HTTPStatus.NOT_FOUND), '사용자 없음', app.system_error_model)
-@user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.system_error_model)
-@user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.system_error_model)
+@user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.NOT_FOUND), '사용자 없음', app.default_error_model)
+@user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
 class UserSample(Resource):
     """
     사용자 상세보기, 수정, 삭제

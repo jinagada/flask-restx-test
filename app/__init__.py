@@ -15,7 +15,7 @@ from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllo
 
 from .configs import PROJECT_ID
 from .services import Sqlite3Service, UsersService
-from .utils import err_log
+from .utils import err_log, make_default_error_response
 
 # env 설정
 env_val = None
@@ -58,14 +58,13 @@ api = Api(
 app.register_blueprint(api_path)
 # 파일업로드 크기 설정(50MB)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
-# error 모델 설정
-error_model = api.model('ErrorMsg', {
-    'erros': fields.Raw(description='오류 내용', example='dict 형식의 오류내용이 포함됨'),
-    'message': fields.String(description='오류 메시지', example='오류 메시지')
-})
-# 500 에러 모델 설정
-system_error_model = api.model('SystemErrorMsg', {
-    'message': fields.String(description='오류 메시지', example='오류 메시지')
+# 기본 오류 메시지
+default_error_model = api.model('DefaultErrorMsg', {
+    'timestamp': fields.DateTime(description='오류발생 시간', example='2023-10-12T21:34:34.617561+00:00'),
+    'status': fields.Integer(description='Http Status 코드', example='403'),
+    'error': fields.String(description='Http Status 코드명', example='Forbidden'),
+    'message': fields.String(description='오류 메시지', example='오류 메시지'),
+    'path': fields.String(description='URL Path', example='')
 })
 
 
@@ -103,16 +102,16 @@ def handle_404_error(error):
     :rtype:
     """
     err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.NOT_FOUND.description)
-    return {'message': str(error)}, int(HTTPStatus.NOT_FOUND)
+    return make_default_error_response(HTTPStatus.NOT_FOUND, str(error))
 
 
 # 등록된 순서대로 처리되므로 500 오류를 가장 마지막에 등록할것!!
 # http status code : https://ko.wikipedia.org/wiki/HTTP_%EC%83%81%ED%83%9C_%EC%BD%94%EB%93%9C
 @api.errorhandler(BadRequest)
-@api.marshal_with(error_model, code=int(HTTPStatus.BAD_REQUEST), description='400 오류')
+@api.marshal_with(default_error_model, code=int(HTTPStatus.BAD_REQUEST), description='400 오류')
 def handle_400_exception(error):
     err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.BAD_REQUEST.description)
-    return {'message': str(error)}, int(HTTPStatus.BAD_REQUEST)
+    return make_default_error_response(HTTPStatus.BAD_REQUEST, str(error))
 
 
 # 여러 오류를 등록하여 하나로 처리 할 수 있음
@@ -121,21 +120,21 @@ def handle_400_exception(error):
 @api.errorhandler(ExpiredSignatureError)
 @api.errorhandler(WrongTokenError)
 @api.errorhandler(UserLookupError)
-@api.marshal_with(system_error_model, code=int(HTTPStatus.UNAUTHORIZED), description='401 오류')
+@api.marshal_with(default_error_model, code=int(HTTPStatus.UNAUTHORIZED), description='401 오류')
 def handle_401_exception(error):
     err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.UNAUTHORIZED.description)
-    return {'message': str(error)}, int(HTTPStatus.UNAUTHORIZED)
+    return make_default_error_response(HTTPStatus.UNAUTHORIZED, str(error))
 
 
 @api.errorhandler(Forbidden)
-@api.marshal_with(system_error_model, code=int(HTTPStatus.FORBIDDEN), description='403 오류')
+@api.marshal_with(default_error_model, code=int(HTTPStatus.FORBIDDEN), description='403 오류')
 def handle_403_exception(error):
     err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.FORBIDDEN.description)
-    return {'message': str(error)}, int(HTTPStatus.FORBIDDEN)
+    return make_default_error_response(HTTPStatus.FORBIDDEN, str(error))
 
 
 @api.errorhandler(NotFound)
-@api.marshal_with(system_error_model, code=int(HTTPStatus.NOT_FOUND), description='404 오류')
+@api.marshal_with(default_error_model, code=int(HTTPStatus.NOT_FOUND), description='404 오류')
 def handle_404_exception(error):
     """
     소스에서 임의로 발생시킨 Not Found
@@ -145,28 +144,28 @@ def handle_404_exception(error):
     :rtype:
     """
     err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.NOT_FOUND.description)
-    return {'message': str(error)}, int(HTTPStatus.NOT_FOUND)
+    return make_default_error_response(HTTPStatus.NOT_FOUND, str(error))
 
 
 @api.errorhandler(MethodNotAllowed)
-@api.marshal_with(system_error_model, code=int(HTTPStatus.METHOD_NOT_ALLOWED), description='405 오류')
+@api.marshal_with(default_error_model, code=int(HTTPStatus.METHOD_NOT_ALLOWED), description='405 오류')
 def handle_405_exception(error):
     err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.METHOD_NOT_ALLOWED.description)
-    return {'message': str(error)}, int(HTTPStatus.METHOD_NOT_ALLOWED)
+    return make_default_error_response(HTTPStatus.METHOD_NOT_ALLOWED, str(error))
 
 
 @api.errorhandler(RequestEntityTooLarge)
-@api.marshal_with(system_error_model, code=int(HTTPStatus.REQUEST_ENTITY_TOO_LARGE), description='413 오류')
+@api.marshal_with(default_error_model, code=int(HTTPStatus.REQUEST_ENTITY_TOO_LARGE), description='413 오류')
 def handle_413_exception(error):
     err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.REQUEST_ENTITY_TOO_LARGE.description)
-    return {'message': str(error)}, int(HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+    return make_default_error_response(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, str(error))
 
 
 @api.errorhandler(Exception)
-@api.marshal_with(system_error_model, code=int(HTTPStatus.INTERNAL_SERVER_ERROR), description='500 오류')
+@api.marshal_with(default_error_model, code=int(HTTPStatus.INTERNAL_SERVER_ERROR), description='500 오류')
 def handle_500_exception(error):
     err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.INTERNAL_SERVER_ERROR.description)
-    return {'message': str(error)}, int(HTTPStatus.INTERNAL_SERVER_ERROR)
+    return make_default_error_response(HTTPStatus.INTERNAL_SERVER_ERROR, str(error))
 
 
 @jwt.user_identity_loader
@@ -268,7 +267,8 @@ def init_app(env):
         logger.addHandler(file_handler)
         logger.setLevel(logging.DEBUG if env == 'local' else logging.INFO)
         # Flask-Babel 초기화 및 locale_selector 설정
-        babel.init_app(app, locale_selector=get_locale)
+        babel.init_app(app)
+        babel.localeselector(get_locale)
         # router 설정
         register_router(api)
         # Sqlite 초기 설정

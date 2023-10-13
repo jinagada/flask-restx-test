@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+from http import HTTPStatus
+
 from flask import request
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -35,3 +38,23 @@ def err_log(logger, e, file_path, traceback_str=None, msg=None):
         else:
             print(error_msg)
 
+
+def make_default_error_response(status: HTTPStatus, message):
+    """
+    기본으로 정의된 에러에 대한 결과 반환
+    :param status:
+    :type status:
+    :param message:
+    :type message:
+    :return:
+    :rtype:
+    """
+    tmp = datetime.utcnow()
+    now = tmp.astimezone(timezone.utc)
+    return {
+        'timestamp': now.strftime("%Y-%m-%dT%H:%M:%S.%f+00:00"),
+        'status': status.value,
+        'error': status.phrase,
+        'message': message,
+        'path': f'{request.path if request.path else ""}'
+    }, status.value
