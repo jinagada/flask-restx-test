@@ -45,6 +45,8 @@ authorizations = {
         'description': '/login 을 사용하여 얻은 access_token 을 사용\n예) Bearer <JWT TOKEN>'
     }
 }
+# UI 설정 : 'none', 'list'(X-Fields 안보임), 'full'(X-Fields 보임)
+app.config['SWAGGER_UI_DOC_EXPANSION'] = 'list'
 # doc 옵션으로 apidoc url path 변경, False 값을 추가하면 404 발생
 # @api.documentation 을 사용하여 별도 처리할 수 있음
 # security 설정을 하면 전체 API 목록에 좌물쇠 버튼이 나타남
