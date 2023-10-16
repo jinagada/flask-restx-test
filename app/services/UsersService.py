@@ -48,6 +48,8 @@ class UsersService:
         """
         user_list = Sqlite3().execute('SELECT SEQ, USER_ID, USER_PW, USER_NAME, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE FROM USERS ORDER BY RDATE DESC LIMIT ?, ?', (start_row, row_per_page))
         totalcount = Sqlite3().execute(query='SELECT COUNT(*) AS CNT FROM USERS', is_one=True)['CNT']
+        for user in user_list:
+            user['RDATE'] = user['RDATE'] + '.617561+00:00'
         return user_list, totalcount
 
     @staticmethod
