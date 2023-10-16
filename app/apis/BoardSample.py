@@ -29,6 +29,7 @@ board_sample.logger = logging.getLogger(f'{PROJECT_ID}.apis.BoardSample')
 class _Schema:
     """
     게시물에서 사용하는 파라메터 및 모델 정의
+    fields.Nested에 연결된 모든 Model이 등록되어 있어야 Swagger 문서가 정상적으로 생성됨
     """
     # 게시물 상세 모델
     board_save_model = board_sample.add_model(BoardSchemas.board_save_model.name, BoardSchemas.board_save_model)
