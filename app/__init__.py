@@ -9,11 +9,12 @@ from flask import Flask, Blueprint, g, request
 from flask_babel import Babel, gettext
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended.exceptions import NoAuthorizationError, UserLookupError, WrongTokenError
-from flask_restx import Api, apidoc, fields
+from flask_restx import Api, apidoc
 from jwt.exceptions import ExpiredSignatureError
 from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllowed, NotFound, Unauthorized, Forbidden
 
 from .configs import PROJECT_ID
+from .schemas import default_error_schema
 from .services import Sqlite3Service, UsersService
 from .utils import err_log, make_default_error_response
 
@@ -59,13 +60,7 @@ app.register_blueprint(api_path)
 # 파일업로드 크기 설정(50MB)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 # 기본 오류 메시지
-default_error_model = api.model('DefaultErrorMsg', {
-    'timestamp': fields.DateTime(description='오류발생 시간', example='2023-10-12T21:34:34.617561+00:00'),
-    'status': fields.Integer(description='Http Status 코드', example='403'),
-    'error': fields.String(description='Http Status 코드명', example='Forbidden'),
-    'message': fields.String(description='오류 메시지', example='오류 메시지'),
-    'path': fields.String(description='URL Path', example='')
-})
+default_error_model = api.model('DefaultErrorMsg', default_error_schema)
 
 
 @api.documentation

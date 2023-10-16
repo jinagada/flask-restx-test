@@ -4,11 +4,12 @@ from http import HTTPStatus
 
 from flask_babel import gettext
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, current_user, get_jwt
-from flask_restx import Namespace, Resource, fields, reqparse
+from flask_restx import Namespace, Resource
 from werkzeug.exceptions import Unauthorized, NotFound
 
 import app
 from ..configs import PROJECT_ID
+from ..schemas import common_list_params, UserSchemas
 from ..services import UsersService
 from ..utils import admin_required
 
@@ -34,52 +35,20 @@ user_sample.logger = logging.getLogger(f'{PROJECT_ID}.apis.UserSample')
 
 class _Schema:
     # 로그인 모델
-    login_model = login_sample.model('Login', {
-        'user_id': fields.String(description='사용자ID', example='UserId', required=True, min_length=5),
-        'password': fields.String(description='비밀번호', example='12#$qw', required=True, min_length=5),
-    })
-    jwt_token_login_model = login_sample.model('JWTTokenLogin', {
-        'access_token': fields.String(description='JWT Access Token', example='JWT TOKEN'),
-        'refresh_token': fields.String(description='JWT Refresh Token', example='JWT TOKEN')
-    })
-    jwt_token_refresh_model = login_sample.model('JWTTokenRefresh', {
-        'access_token': fields.String(description='JWT Access Token', example='JWT TOKEN')
-    })
-    # 사용자 목록 조회 파라메터
-    user_list_params = reqparse.RequestParser()
-    user_list_params.add_argument('start_row', location='args', type=int, required=True, default=0, help='시작행 번호')
-    user_list_params.add_argument('row_per_page', location='args', type=int, required=True, default=10, help='화면당 행 수')
+    login_model = login_sample.model('Login', UserSchemas.login_schema)
+    jwt_token_login_model = login_sample.model('JWTTokenLogin', UserSchemas.jwt_token_login_schema)
+    jwt_token_refresh_model = login_sample.model('JWTTokenRefresh', UserSchemas.jwt_token_refresh_schema)
     # 사용자 상세 모델
-    user_save_model = user_sample.model('UserSave', {
-        'user_id': fields.String(description='사용자ID', example='UserId', attribute='USER_ID', required=True, min_length=5, max_length=20),
-        'password': fields.String(description='비밀번호', example='Password', attribute='USER_PW', required=True, min_length=5, max_length=15),
-        'user_name': fields.String(description='사용자명', example='UserName', attribute='USER_NAME', required=True, min_length=2, max_length=50)
-    })
-    user_detail_model = user_sample.inherit('UserDetail', user_save_model, {
-        'user_seq': fields.Integer(description='사용자 번호', example=1, attribute='SEQ'),
-        'rdate': fields.DateTime(description='등록일시', example='2023-09-06T14:42:06', attribute='RDATE'),
-        'mdate': fields.DateTime(description='수정일시', example='2023-09-06T14:42:06', attribute='MDATE')
-    })
+    user_save_model = user_sample.model('UserSave', UserSchemas.user_save_schema)
+    user_detail_model = user_sample.inherit('UserDetail', user_save_model, UserSchemas.user_detail_schema)
     # 사용자 등록 결과
-    user_save_result_model = user_sample.model('UserSaveResult', {
-        'result': fields.String(description='결과', example='Success'),
-        'user_seq': fields.Integer(description='사용자 번호', example=1)
-    })
+    user_save_result_model = user_sample.model('UserSaveResult', UserSchemas.user_save_result_schema)
     # 사용자 삭제 결과
-    user_delete_result_model = user_sample.model('UserDeleteResult', {
-        'result': fields.String(description='결과', example='Success'),
-        'deleted_count': fields.Integer(description='삭제된 사용자수', example=1)
-    })
+    user_delete_result_model = user_sample.model('UserDeleteResult', UserSchemas.user_delete_result_schema)
     # 사용자 목록 모델
-    user_list_model = user_sample.model('UserListResult', {
-        'totalcount': fields.Integer(description='사용자 전체 수', example=100),
-        'user_list': fields.List(fields.Nested(user_detail_model, skip_none=True))
-    })
+    user_list_model = user_sample.model('UserListResult', UserSchemas.user_list_schema)
     # current_user 및 권한 모델
-    jwt_login_info_model = login_sample.model('JWTLoginInfo', {
-        'current_user': fields.Nested(user_detail_model, skip_none=True),
-        'claims': fields.Raw(description='JWT TOKEN 상세내용', example='dict 형식의 상세내용')
-    })
+    jwt_login_info_model = login_sample.model('JWTLoginInfo', UserSchemas.jwt_login_info_schema)
 
 
 @login_sample.route('')
@@ -187,7 +156,7 @@ class UserPost(Resource):
     사용자 목록, 등록
     """
     @jwt_required()
-    @user_sample.expect(_Schema.user_list_params, validate=True)
+    @user_sample.expect(common_list_params, validate=True)
     @user_sample.marshal_with(_Schema.user_list_model, code=int(HTTPStatus.OK), description='사용자 목록')
     def get(self):
         """
@@ -195,8 +164,11 @@ class UserPost(Resource):
         :return:
         :rtype:
         """
-        args = _Schema.user_list_params.parse_args()
+        args = common_list_params.parse_args()
         (user_list, totalcount) = UsersService().get_user_list(args['start_row'], args['row_per_page'])
+        user_sample.logger.info(app.api.models.keys())
+        user_sample.logger.info(user_sample.models.keys())
+        user_sample.logger.info(login_sample.models.keys())
         return {'user_list': user_list, 'totalcount': totalcount}, int(HTTPStatus.OK)
 
     @admin_required()

@@ -6,12 +6,13 @@ from http import HTTPStatus
 from flask import g
 from flask_babel import gettext
 from flask_jwt_extended import jwt_required, current_user, get_jwt_identity
-from flask_restx import Namespace, Resource, fields, reqparse
+from flask_restx import Namespace, Resource
 from werkzeug.datastructures import FileStorage
 from werkzeug.exceptions import NotFound
 
 import app
 from ..configs import PathConfig, PROJECT_ID
+from ..schemas import common_list_params, BoardSchemas
 from ..services import BoardService
 
 # path에 설정된 URL을 기준으로 각 Namespace가 구분됨
@@ -29,83 +30,34 @@ class _Schema:
     """
     게시물에서 사용하는 파라메터 및 모델 정의
     모델이 Namespace에 등록되는 구조로 되어있어 별도의 디렉토리로 분리하기 어려움
+    Schema dic 만 별로 파일로 분리
     """
-    # 게시물 목록 조회 query 파라메터
-    # type=int 인 경우 파라메터에 값이 없으면, default 값이 있어도 parse_args 실행시 설정이 되지 않음
-    board_list_params = reqparse.RequestParser()
-    board_list_params.add_argument('start_row', location='args', type=int, required=True, default=0, help='시작행 번호')
-    board_list_params.add_argument('row_per_page', location='args', type=int, required=True, default=10, help='화면당 행 수')
     # 게시물 상세 모델
-    board_save_model = board_sample.model('BoardSave', {
-        'title': fields.String(description='게시물 제목', example='제목', attribute='TITLE', required=True, min_length=1, max_length=200),
-        'contents': fields.String(description='게시물 내용', example='내용', attribute='CONTENTS', required=True, min_length=1)
-    })
-    board_detail_model = board_sample.inherit('BoardDetail', board_save_model, {
-        'board_seq': fields.Integer(description='게시물 번호', example=1, attribute='SEQ'),
-        'r_user_id': fields.String(description='작성자', example='UserId', attribute='RUSER'),
-        'm_user_id': fields.String(description='수정자', example='UserId', attribute='MUSER'),
-        'rdate': fields.DateTime(description='등록일시', example='2023-09-06T14:42:06', attribute='RDATE'),
-        'mdate': fields.DateTime(description='수정일시', example='2023-09-06T14:42:06', attribute='MDATE')
-    })
+    board_save_model = board_sample.model('BoardSave', BoardSchemas.board_save_schema)
+    board_detail_model = board_sample.inherit('BoardDetail', board_save_model, BoardSchemas.board_detail_schema)
     # 게시물 등록 결과
-    board_save_result_model = board_sample.model('BoardSaveResult', {
-        'result': fields.String(description='결과', example='Success'),
-        'board_seq': fields.Integer(description='게시물 번호', example=1)
-    })
+    board_save_result_model = board_sample.model('BoardSaveResult', BoardSchemas.board_save_result_schema)
     # 게시물 삭제 결과
-    board_delete_result_model = board_sample.model('BoardDeleteResult', {
-        'result': fields.String(description='결과', example='Success'),
-        'deleted_count': fields.Integer(description='삭제된 게시물수', example=1)
-    })
+    board_delete_result_model = board_sample.model('BoardDeleteResult', BoardSchemas.board_delete_result_schema)
     # 게시물 목록 모델
-    board_list_model = board_sample.model('BoardListResult', {
-        'totalcount': fields.Integer(description='게시물 전체수', example=100),
-        # 게시물 상세 모델을 목록에 사용, skip_none 옵션으로 값이 없는 필드 제거
-        'board_list': fields.List(fields.Nested(board_detail_model, skip_none=True))
-    })
+    board_list_model = board_sample.model('BoardListResult', BoardSchemas.board_list_schema)
     # 파일 업로드 파라메터
     # 아직은 다른 type의 파라메터를 추가하거나 여러 파일 동시 업로드는 지원하지 않아보임
     # 한번에 하나의 파일만 업로드 가능함
     file_upload_params = board_sample.parser()
     file_upload_params.add_argument('file', location='files', type=FileStorage, required=True, help='업로드 파일')
     # 파일 업로드 결과 모델
-    file_upload_result_model = board_sample.model('FileUploadResult', {
-        'result': fields.String(description='결과', example='Success'),
-        'file_org_name': fields.String(description='원본 파일명', example='aaa.txt'),
-        'file_tmp_path': fields.String(description='파일의 임시 디렉토리', example='tmp'),
-        'file_tmp_name': fields.String(description='파일의 임시 파일명', example='beb7728bebcb430c9c63716caed6b808.txt')
-    })
+    file_upload_result_model = board_sample.model('FileUploadResult', BoardSchemas.file_upload_result_schema)
     # 업로드된 파일정보 저장 모델
-    file_save_model = board_sample.model('FileSave', {
-        # fields 로 선언되는 모든 타입은 None을 하용하지 않음
-        'file_seq': fields.String(description='파일 일련번호', example='번호가 있는 경우 양수(1,2,3), 없는 경우는 공백문자("")'),
-        'file_org_name': fields.String(description='원본 파일명', example='aaa.txt', required=True, min_length=1, max_length=255),
-        'file_tmp_name': fields.String(description='파일의 임시 파일명', example='beb7728bebcb430c9c63716caed6b808.txt', required=True, min_length=1, max_length=255),
-        'file_tmp_path': fields.String(description='파일의 임시 디렉토리', example='tmp', required=True, min_length=1, max_length=255)
-    })
+    file_save_model = board_sample.model('FileSave', BoardSchemas.file_save_schema)
     # 파일정보 상세
-    file_detail_model = board_sample.model('FileDetail', {
-        'file_seq': fields.Integer(description='파일 일련번호', example=1, attribute='SEQ'),
-        'board_seq': fields.Integer(description='게시물 번호', example=1, attribute='BOARD_SEQ'),
-        'file_path': fields.String(description='파일 경로', example='upload', attribute='PATH'),
-        'file_name': fields.String(description='파일명', example='beb7728bebcb430c9c63716caed6b808.txt', attribute='FNAME'),
-        'file_org_name': fields.String(description='원본 파일명', example='aaa.txt', attribute='ONAME'),
-        'rdate': fields.DateTime(description='등록일시', example='2023-09-06T14:42:06', attribute='RDATE'),
-        'r_user_id': fields.String(description='작성자', example='UserId', attribute='RUSER')
-    })
+    file_detail_model = board_sample.model('FileDetail', BoardSchemas.file_detail_schema)
     # 실제 파라메터로 넘길 파일정보 목록 모델
-    file_save_list_model = board_sample.model('FileSaveList', {
-        'file_list': fields.List(fields.Nested(file_save_model))
-    })
+    file_save_list_model = board_sample.model('FileSaveList', BoardSchemas.file_save_list_schema)
     # 파일 목록 모델
-    file_list_model = board_sample.model('FileList', {
-        'board_seq': fields.Integer(description='게시물 번호', example=1),
-        'file_list': fields.List(fields.Nested(file_detail_model, skip_none=True))
-    })
+    file_list_model = board_sample.model('FileList', BoardSchemas.file_list_schema)
     # 파일정보 저장 결과 모델
-    file_save_result_model = board_sample.inherit('FileSaveResult', file_list_model, {
-        'result': fields.String(description='결과', example='Success')
-    })
+    file_save_result_model = board_sample.inherit('FileSaveResult', file_list_model, BoardSchemas.file_save_result_schema)
 
 
 # Namespace에 설정된 path값 이후의 URL을 route에 추가할 수 있음
@@ -122,7 +74,7 @@ class BoardPost(Resource):
     # request : query 파라메터에서도 validate 옵션을 사용하면 설정된 유효성 검사가 function 진입전에 실행됨
     @jwt_required(optional=True)
     @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
-    @board_sample.expect(_Schema.board_list_params, validate=True)
+    @board_sample.expect(common_list_params, validate=True)
     # response : marshal_with를 사용하면 결과값에 대한 모델매핑과 apidoc을 한번에 작성 할 수 있음
     @board_sample.marshal_with(_Schema.board_list_model, code=int(HTTPStatus.OK), description='게시물 목록')
     def get(self):
@@ -137,7 +89,7 @@ class BoardPost(Resource):
             # Namespace logger 사용
             board_sample.logger.info(f'게시물 조회 접근자 : {current_user["USER_ID"]}')
         # query 파라메터의 경우 parse_args() 실행시 설정된 유효성 검사가 별도로 진행됨
-        args = _Schema.board_list_params.parse_args()
+        args = common_list_params.parse_args()
         (board_list, totalcount) = BoardService().get_board_list(args['start_row'], args['row_per_page'])
         # marshal_with 에 등록된 모델과 일치하지 않는 필드는 매핑되지 않음
         return {'totalcount': totalcount, 'board_list': board_list}, int(HTTPStatus.OK)
