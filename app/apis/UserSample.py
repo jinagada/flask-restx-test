@@ -35,20 +35,20 @@ user_sample.logger = logging.getLogger(f'{PROJECT_ID}.apis.UserSample')
 
 class _Schema:
     # 로그인 모델
-    login_model = login_sample.model('Login', UserSchemas.login_schema)
-    jwt_token_login_model = login_sample.model('JWTTokenLogin', UserSchemas.jwt_token_login_schema)
-    jwt_token_refresh_model = login_sample.model('JWTTokenRefresh', UserSchemas.jwt_token_refresh_schema)
+    login_model = login_sample.add_model(UserSchemas.login_model.name, UserSchemas.login_model)
+    jwt_token_login_model = login_sample.add_model(UserSchemas.jwt_token_login_model.name, UserSchemas.jwt_token_login_model)
+    jwt_token_refresh_model = login_sample.add_model(UserSchemas.jwt_token_refresh_model.name, UserSchemas.jwt_token_refresh_model)
     # 사용자 상세 모델
-    user_save_model = user_sample.model('UserSave', UserSchemas.user_save_schema)
-    user_detail_model = user_sample.inherit('UserDetail', user_save_model, UserSchemas.user_detail_schema)
+    user_save_model = user_sample.add_model(UserSchemas.user_save_model.name, UserSchemas.user_save_model)
+    user_detail_model = user_sample.add_model(UserSchemas.user_detail_model.name, UserSchemas.user_detail_model)
     # 사용자 등록 결과
-    user_save_result_model = user_sample.model('UserSaveResult', UserSchemas.user_save_result_schema)
+    user_save_result_model = user_sample.add_model(UserSchemas.user_save_result_model.name, UserSchemas.user_save_result_model)
     # 사용자 삭제 결과
-    user_delete_result_model = user_sample.model('UserDeleteResult', UserSchemas.user_delete_result_schema)
+    user_delete_result_model = user_sample.add_model(UserSchemas.user_delete_result_model.name, UserSchemas.user_delete_result_model)
     # 사용자 목록 모델
-    user_list_model = user_sample.model('UserListResult', UserSchemas.user_list_schema)
+    user_list_model = user_sample.add_model(UserSchemas.user_list_model.name, UserSchemas.user_list_model)
     # current_user 및 권한 모델
-    jwt_login_info_model = login_sample.model('JWTLoginInfo', UserSchemas.jwt_login_info_schema)
+    jwt_login_info_model = login_sample.add_model(UserSchemas.jwt_login_info_model.name, UserSchemas.jwt_login_info_model)
 
 
 @login_sample.route('')

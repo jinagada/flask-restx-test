@@ -14,7 +14,7 @@ from jwt.exceptions import ExpiredSignatureError
 from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllowed, NotFound, Unauthorized, Forbidden
 
 from .configs import PROJECT_ID
-from .schemas import default_error_schema
+from .schemas import default_error_model as default_error
 from .services import Sqlite3Service, UsersService
 from .utils import err_log, make_default_error_response
 
@@ -59,8 +59,8 @@ api = Api(
 app.register_blueprint(api_path)
 # 파일업로드 크기 설정(50MB)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
-# 기본 오류 메시지
-default_error_model = api.model('DefaultErrorMsg', default_error_schema)
+# 기본 오류 메시지 : name 부분은 Model 객체에 정의한 name을 동일하게 사용
+default_error_model = api.add_model(default_error.name, default_error)
 
 
 @api.documentation

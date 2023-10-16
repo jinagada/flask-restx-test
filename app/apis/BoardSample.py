@@ -29,35 +29,33 @@ board_sample.logger = logging.getLogger(f'{PROJECT_ID}.apis.BoardSample')
 class _Schema:
     """
     게시물에서 사용하는 파라메터 및 모델 정의
-    모델이 Namespace에 등록되는 구조로 되어있어 별도의 디렉토리로 분리하기 어려움
-    Schema dic 만 별로 파일로 분리
     """
     # 게시물 상세 모델
-    board_save_model = board_sample.model('BoardSave', BoardSchemas.board_save_schema)
-    board_detail_model = board_sample.inherit('BoardDetail', board_save_model, BoardSchemas.board_detail_schema)
+    board_save_model = board_sample.add_model(BoardSchemas.board_save_model.name, BoardSchemas.board_save_model)
+    board_detail_model = board_sample.add_model(BoardSchemas.board_detail_model.name, BoardSchemas.board_detail_model)
     # 게시물 등록 결과
-    board_save_result_model = board_sample.model('BoardSaveResult', BoardSchemas.board_save_result_schema)
+    board_save_result_model = board_sample.add_model(BoardSchemas.board_save_result_model.name, BoardSchemas.board_save_result_model)
     # 게시물 삭제 결과
-    board_delete_result_model = board_sample.model('BoardDeleteResult', BoardSchemas.board_delete_result_schema)
+    board_delete_result_model = board_sample.add_model(BoardSchemas.board_delete_result_model.name, BoardSchemas.board_delete_result_model)
     # 게시물 목록 모델
-    board_list_model = board_sample.model('BoardListResult', BoardSchemas.board_list_schema)
+    board_list_model = board_sample.add_model(BoardSchemas.board_list_model.name, BoardSchemas.board_list_model)
     # 파일 업로드 파라메터
     # 아직은 다른 type의 파라메터를 추가하거나 여러 파일 동시 업로드는 지원하지 않아보임
     # 한번에 하나의 파일만 업로드 가능함
     file_upload_params = board_sample.parser()
     file_upload_params.add_argument('file', location='files', type=FileStorage, required=True, help='업로드 파일')
     # 파일 업로드 결과 모델
-    file_upload_result_model = board_sample.model('FileUploadResult', BoardSchemas.file_upload_result_schema)
+    file_upload_result_model = board_sample.add_model(BoardSchemas.file_upload_result_model.name, BoardSchemas.file_upload_result_model)
     # 업로드된 파일정보 저장 모델
-    file_save_model = board_sample.model('FileSave', BoardSchemas.file_save_schema)
+    file_save_model = board_sample.add_model(BoardSchemas.file_save_model.name, BoardSchemas.file_save_model)
     # 파일정보 상세
-    file_detail_model = board_sample.model('FileDetail', BoardSchemas.file_detail_schema)
+    file_detail_model = board_sample.add_model(BoardSchemas.file_detail_model.name, BoardSchemas.file_detail_model)
     # 실제 파라메터로 넘길 파일정보 목록 모델
-    file_save_list_model = board_sample.model('FileSaveList', BoardSchemas.file_save_list_schema)
+    file_save_list_model = board_sample.add_model(BoardSchemas.file_save_list_model.name, BoardSchemas.file_save_list_model)
     # 파일 목록 모델
-    file_list_model = board_sample.model('FileList', BoardSchemas.file_list_schema)
+    file_list_model = board_sample.add_model(BoardSchemas.file_list_model.name, BoardSchemas.file_list_model)
     # 파일정보 저장 결과 모델
-    file_save_result_model = board_sample.inherit('FileSaveResult', file_list_model, BoardSchemas.file_save_result_schema)
+    file_save_result_model = board_sample.add_model(BoardSchemas.file_save_result_model.name, BoardSchemas.file_save_result_model)
 
 
 # Namespace에 설정된 path값 이후의 URL을 route에 추가할 수 있음
