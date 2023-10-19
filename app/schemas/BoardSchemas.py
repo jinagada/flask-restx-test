@@ -30,11 +30,14 @@ board_list_model = Model('BoardListResult', {
     'board_list': fields.List(fields.Nested(board_detail_model, skip_none=True))
 })
 # 파일 업로드 결과 Model
-file_upload_result_model = Model('FileUploadResult', {
-    'result': fields.String(description='결과', example='Success'),
+file_model = Model('File', {
     'file_org_name': fields.String(description='원본 파일명', example='aaa.txt'),
     'file_tmp_path': fields.String(description='파일의 임시 디렉토리', example='tmp'),
     'file_tmp_name': fields.String(description='파일의 임시 파일명', example='beb7728bebcb430c9c63716caed6b808.txt')
+})
+file_upload_result_model = Model('FileUploadResult', {
+    'result': fields.String(description='결과', example='Success'),
+    'files': fields.List(fields.Nested(file_model))
 })
 # 업로드된 파일정보 저장 Model
 file_save_model = Model('FileSave', {

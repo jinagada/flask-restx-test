@@ -33,6 +33,7 @@ class _Schema:
     fields.Nested에 연결된 모든 Model이 등록되어 있어야 Swagger 문서가 정상적으로 생성됨
     다른 Namespace에서 모델이 등록된것을 재사용하는 경우 add_model을 생략할 수 있음
     다른 Namespace에 등록된 모델을 다시 등록해도 됨
+    add_model() 로 등록된 모델은 등록한 결과 변수를 사용하지 않고 생성 시 사용한 변수로 expect, response, marshal_with 에서 매핑 할 수 있음
     """
     # 게시물 상세 모델
     board_save_model = board_sample.add_model(BoardSchemas.board_save_model.name, BoardSchemas.board_save_model)
@@ -44,11 +45,11 @@ class _Schema:
     # 게시물 목록 모델
     board_list_model = board_sample.add_model(BoardSchemas.board_list_model.name, BoardSchemas.board_list_model)
     # 파일 업로드 파라메터
-    # 아직은 다른 type의 파라메터를 추가하거나 여러 파일 동시 업로드는 지원하지 않아보임
-    # 한번에 하나의 파일만 업로드 가능함
+    # action='append'를 사용하면 여러 파일을 동시에 업로드 할 수 있음
     file_upload_params = board_sample.parser()
-    file_upload_params.add_argument('file', location='files', type=FileStorage, required=True, help='업로드 파일')
+    file_upload_params.add_argument('file', location='files', type=FileStorage, required=True, help='업로드 파일', action='append')
     # 파일 업로드 결과 모델
+    board_sample.add_model(BoardSchemas.file_model.name, BoardSchemas.file_model)
     file_upload_result_model = board_sample.add_model(BoardSchemas.file_upload_result_model.name, BoardSchemas.file_upload_result_model)
     # 업로드된 파일정보 저장 모델
     file_save_model = board_sample.add_model(BoardSchemas.file_save_model.name, BoardSchemas.file_save_model)
@@ -185,8 +186,6 @@ class BoardSample(Resource):
 class FileUploadPost(Resource):
     """
     파일 업로드 및 임시 저장정보 반환
-    flask-restx 에서는 여러파일을 한번에 업로드하는것을 기본적으로는 지원하지 않는것으로 보임
-    https://github.com/python-restx/flask-restx/issues/177
     """
     @jwt_required()
     @board_sample.expect(_Schema.file_upload_params, validate=True)
@@ -199,6 +198,18 @@ class FileUploadPost(Resource):
         """
         args = _Schema.file_upload_params.parse_args()
         uploaded_file = args['file']
+        uploaded_file_list = []
+        if len(uploaded_file) > 1:
+            # 여러 파일의 경우
+            for file_obj in uploaded_file:
+                uploaded_file_list.append(self._file_save(file_obj))
+        else:
+            # 단일 파일의 경우
+            uploaded_file_list.append(self._file_save(uploaded_file[0]))
+        return {'result': 'Success', 'files': uploaded_file_list}, int(HTTPStatus.OK)
+
+    @staticmethod
+    def _file_save(uploaded_file):
         # 원본파일명
         filename = uploaded_file.filename
         # 임시저장 디렉토리 설정
@@ -211,7 +222,7 @@ class FileUploadPost(Resource):
         # 업로드 파일 임시저장
         tmp_file_full_path = os.path.join(file_full_path, file_tmp_name)
         uploaded_file.save(tmp_file_full_path)
-        return {'result': 'Success', 'file_org_name': filename, 'file_tmp_path': file_tmp_path, 'file_tmp_name': file_tmp_name}, int(HTTPStatus.OK)
+        return {'file_org_name': filename, 'file_tmp_path': file_tmp_path, 'file_tmp_name': file_tmp_name}
 
 
 @board_sample.route('/<int:board_seq>/file')

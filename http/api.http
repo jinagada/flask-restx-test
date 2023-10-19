@@ -106,12 +106,17 @@ Authorization: Bearer {{access_token}}
 # 테스트 시 한글 파일명이 깨지는 현상이 있어 filename 설정은 영어로 설정
 # 파일업로드를 브라우저에서 할 경우 한글 파일명이 깨지지 않음
 POST {{hosts}}/board/fileupload
+Authorization: Bearer {{access_token}}
 Content-Type: multipart/form-data; boundary=boundary
 
 --boundary
-Content-Disposition: form-data; name=file; filename="sample.xlsx"
+Content-Disposition: form-data; name=file; filename="sample.txt"
 
-< ../../../../Downloads/한글 파일명 (1).xlsx
+< ../../../../Downloads/information.txt
+--boundary
+Content-Disposition: form-data; name=file; filename="sample.txt"
+
+< ../../../../Downloads/information.txt
 --boundary--
 
 ### BoardSample - /board/<int:board_seq>/file
