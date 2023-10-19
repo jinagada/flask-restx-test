@@ -17,6 +17,29 @@
 - [Flask-Babel](https://python-babel.github.io/flask-babel/)
 - [Welcome to Flask(English)](https://flask-docs.readthedocs.io/en/latest/)
 - [Welcome to Flask(Korean)](https://flask-docs-kr.readthedocs.io/ko/latest/)
+- [URL Converters](https://exploreflask.com/en/latest/views.html#custom-converters)
+  - 예제
+  ```python
+  from werkzeug.routing import BaseConverter
+  
+  class IntListConverter(BaseConverter):
+      regex = r'\d+(?:,\d+)*,?'
+  
+      def to_python(self, value):
+          return [int(x) for x in value.split(',')]
+  
+      def to_url(self, value):
+          return ','.join(str(x) for x in value)
+  ```
+  ```python
+  app = Flask(__name__)
+  app.url_map.converters['int_list'] = IntListConverter
+  ```
+  ```python
+  @app.route('/add/<int_list:values>')
+  def add(values):
+      return str(sum(values))
+  ```
 
 ## PyCharm 에서 Flask 프로젝트 생성
 ### 개발서버 디렉토리 생성
