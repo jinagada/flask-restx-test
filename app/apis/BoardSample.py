@@ -186,6 +186,7 @@ class BoardSample(Resource):
 class FileUploadPost(Resource):
     """
     파일 업로드 및 임시 저장정보 반환
+    consumes 관련 설정 버그 : https://github.com/python-restx/flask-restx/issues/471
     """
     @jwt_required()
     @board_sample.expect(_Schema.file_upload_params, validate=True)
