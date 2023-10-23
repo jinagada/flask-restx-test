@@ -31,9 +31,18 @@ class _Schema:
     게시물에서 사용하는 파라메터 및 모델 정의
     schemas에서 구성한 Model을 사용하기 위해서는 add_model 로 최소 한번은 등록되어야함
     fields.Nested에 연결된 모든 Model이 등록되어 있어야 Swagger 문서가 정상적으로 생성됨
+    예) a = Model('a', {})
+        b = Model('b', {'ref': fields.Nested(a)})
+        c.add_model(a)
+        d = c.add_model(b)
+        e.marshal_with(d, code=200, description='b')
     다른 Namespace에서 모델이 등록된것을 재사용하는 경우 add_model을 생략할 수 있음
+    예) f.marshal_with(e.d, code=200, description='b')
     다른 Namespace에 등록된 모델을 다시 등록해도 됨
-    add_model() 로 등록된 모델은 등록한 결과 변수를 사용하지 않고 생성 시 사용한 변수로 expect, response, marshal_with 에서 매핑 할 수 있음
+    예) g = f.add_mode(a)
+        f.marshal_with(g, code=200, description='a')
+    add_model() 로 등록된 모델은 등록한 변수를 사용하지 않고 생성 시 사용한 변수로 expect, response, marshal_with 에서 매핑 할 수 있음
+    예) f.marshal_with(a, code=200, description='a')
     """
     # 게시물 상세 모델
     board_save_model = board_sample.add_model(BoardSchemas.board_save_model.name, BoardSchemas.board_save_model)
