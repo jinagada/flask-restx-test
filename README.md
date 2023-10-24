@@ -13,33 +13,81 @@
 
 # 참고 문서
 - [Welcome to Flask-RESTX’s documentation!](https://flask-restx.readthedocs.io/en/latest/index.html)
+  - path에 문서 적용 예제
+  ```python
+  @api.route('/check/<enum_list:values>')
+  @api.param('values', 'description', enum=list([v.name for v in Enums]), example='예제')
+  ```
+  - Java에서 Map<String, String>으로된 스키마의 표현 방법
+  ```python
+  'data': fields.Wildcard(fields.String(description='설명'), description='설명')
+  ```
+  ```text
+  data {
+    description: 설명
+    < * >: string
+           설명
+  }
+  ```
 - [Flask-JWT-Extended’s Documentation](https://flask-jwt-extended.readthedocs.io/en/stable/)
 - [Flask-Babel](https://python-babel.github.io/flask-babel/)
 - [Welcome to Flask(English)](https://flask-docs.readthedocs.io/en/latest/)
 - [Welcome to Flask(Korean)](https://flask-docs-kr.readthedocs.io/ko/latest/)
-- [URL Converters](https://exploreflask.com/en/latest/views.html#custom-converters)
-  - 예제
-  ```python
-  from werkzeug.routing import BaseConverter
+  - [URL Converters](https://exploreflask.com/en/latest/views.html#custom-converters)
+    - 예제 1
+    ```python
+    from werkzeug.routing import BaseConverter
   
-  class IntListConverter(BaseConverter):
-      regex = r'\d+(?:,\d+)*,?'
+    class IntListConverter(BaseConverter):
+        regex = r'\d+(?:,\d+)*,?'
   
-      def to_python(self, value):
-          return [int(x) for x in value.split(',')]
+        def to_python(self, value):
+            return [int(x) for x in value.split(',')]
   
-      def to_url(self, value):
-          return ','.join(str(x) for x in value)
-  ```
-  ```python
-  app = Flask(__name__)
-  app.url_map.converters['int_list'] = IntListConverter
-  ```
-  ```python
-  @app.route('/add/<int_list:values>')
-  def add(values):
-      return str(sum(values))
-  ```
+        def to_url(self, value):
+            return ','.join(str(x) for x in value)
+    ```
+    ```python
+    app = Flask(__name__)
+    app.url_map.converters['int_list'] = IntListConverter
+    ```
+    ```python
+    @app.route('/add/<int_list:values>')
+    @app.param('values', '설명', example='1,2,3')
+    def add(values):
+        return str(sum(values))
+    ```
+    - 예제 2
+    ```python
+    from flask import Flask
+    from enum import Enum, unique
+    from werkzeug.routing import BaseConverter, ValidationError
+  
+    @unique
+    class RequestType(str, Enum):
+        TYPE1 = 'abc'
+        TYPE2 = 'def'
+  
+    class RequestTypeConverter(BaseConverter):
+  
+        def to_python(self, value):
+            try:
+                request_type = RequestType(value)
+                return request_type
+            except ValueError as err:
+                raise ValidationError()
+  
+        def to_url(self, obj):
+            return obj.value
+  
+  
+    app = Flask(__name__)
+    app.url_map.converters.update(request_type=RequestTypeConverter)
+  
+    @app.route('/api/v1/<request_type:t>', methods=['POST'])
+    def root(t):
+        return f'{t.name} -> {t.value}'
+    ```
 
 ## PyCharm 에서 Flask 프로젝트 생성
 ### 개발서버 디렉토리 생성
