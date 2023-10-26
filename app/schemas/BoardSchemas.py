@@ -1,10 +1,17 @@
 from flask_restx import fields, Model
 
+from ..enums import BoardsCode
 
+# JSON 객체를 위한 Wildcard 모델 설정
+wildcard_model = Model('WildcardModel', {
+    '*': fields.Wildcard(fields.String(description='추가 정보'))
+})
 # 게시물 상세 Model
 board_save_model = Model('BoardSave', {
+    'boards_code': fields.String(description='게시물 구분', enum=list([v.name for v in BoardsCode]), attribute='BOARDS_CODE', required=True),
     'title': fields.String(description='게시물 제목', example='제목', attribute='TITLE', required=True, min_length=1, max_length=200),
-    'contents': fields.String(description='게시물 내용', example='내용', attribute='CONTENTS', required=True, min_length=1)
+    'contents': fields.String(description='게시물 내용', example='내용', attribute='CONTENTS', required=True, min_length=1),
+    'add_fields': fields.Nested(wildcard_model, description='추가 정보', attribute='ADD_FIELDS')
 })
 board_detail_model = board_save_model.inherit('BoardDetail', {
     'board_seq': fields.Integer(description='게시물 번호', example=1, attribute='SEQ'),

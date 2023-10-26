@@ -16,7 +16,7 @@ from werkzeug.exceptions import BadRequest, RequestEntityTooLarge, MethodNotAllo
 from .configs import PROJECT_ID
 from .schemas import default_error_model as default_error
 from .services import Sqlite3Service, UsersService
-from .utils import err_log, make_default_error_response
+from .utils import err_log, make_default_error_response, IntListConverter, AuthCodeConverter, BoardsCodeConverter
 
 # env 설정
 env_val = None
@@ -59,6 +59,12 @@ api = Api(
 app.register_blueprint(api_path)
 # 파일업로드 크기 설정(50MB)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+# <int_list:values> Converter 추가
+app.url_map.converters['int_list'] = IntListConverter
+# <auth_code:value> Converter 추가
+app.url_map.converters['auth_code'] = AuthCodeConverter
+# <boards_code:value> Converter 추가
+app.url_map.converters['boards_code'] = BoardsCodeConverter
 # 기본 오류 메시지 : name 부분은 Model 객체에 정의한 name을 동일하게 사용
 default_error_model = api.add_model(default_error.name, default_error)
 
@@ -98,6 +104,19 @@ def handle_404_error(error):
     """
     err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.NOT_FOUND.description)
     return make_default_error_response(HTTPStatus.NOT_FOUND, str(error))
+
+
+@app.errorhandler(500)
+def handle_500_error(error):
+    """
+    URL PATH에서 발생한 오류 확인
+    :param error:
+    :type error:
+    :return:
+    :rtype:
+    """
+    err_log(logger, error, __name__, traceback.format_exc(), HTTPStatus.INTERNAL_SERVER_ERROR.description)
+    return make_default_error_response(HTTPStatus.INTERNAL_SERVER_ERROR, str(error))
 
 
 # 등록된 순서대로 처리되므로 500 오류를 가장 마지막에 등록할것!!

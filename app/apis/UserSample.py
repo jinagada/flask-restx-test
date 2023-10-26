@@ -9,6 +9,7 @@ from werkzeug.exceptions import Unauthorized, NotFound
 
 import app
 from ..configs import PROJECT_ID
+from ..enums import AuthCode
 from ..schemas import common_list_params, UserSchemas
 from ..services import UsersService
 from ..utils import admin_required
@@ -61,6 +62,7 @@ class LoginPost(Resource):
     """
     @login_sample.expect(_Schema.login_model, validate=True)
     @login_sample.marshal_with(_Schema.jwt_token_login_model, code=int(HTTPStatus.OK), description='JWT TOKEN Login 정보')
+    @login_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
     def post(self):
         """
         로그인
@@ -74,10 +76,7 @@ class LoginPost(Resource):
                 raise Unauthorized(gettext(u'사용자 정보가 일치하지 않습니다.'))
             else:
                 # 권한정보 추가
-                if user_info['SEQ'] == 1:
-                    additional_claims = {'aud': 'ADMIN'}
-                else:
-                    additional_claims = {'aud': 'USER'}
+                additional_claims = {'aud': user_info['AUTH_CODE']}
                 # timedelta를 사용하여 만료기간을 설정할 수 있음
                 return {
                     # access_token : 5분(사용자의 인증정보 및 권한 정보를 가진 짧은 주기의 토큰으로 임시저장소에 저장됨)
@@ -125,10 +124,7 @@ class RefreshPost(Resource):
         # access_token 의 identity 값은 사용자의 전체 정보이므로 get_jwt_identity 으로 JWT TOKEN 에서 가져온 sub 정보와는 다름
         # current_user 정보를 사용해야 하는것으로 보임
         # 권한정보 추가
-        if current_user['SEQ'] == 1:
-            additional_claims = {'aud': 'ADMIN'}
-        else:
-            additional_claims = {'aud': 'USER'}
+        additional_claims = {'aud': current_user['AUTH_CODE']}
         return {
             # access_token : 5분
             'access_token': create_access_token(identity=current_user, additional_claims=additional_claims, expires_delta=timedelta(minutes=5))
@@ -166,15 +162,12 @@ class UserPost(Resource):
         """
         args = common_list_params.parse_args()
         (user_list, totalcount) = UsersService().get_user_list(args['start_row'], args['row_per_page'])
-        user_sample.logger.info(app.api.models.keys())
-        user_sample.logger.info(user_sample.models.keys())
-        user_sample.logger.info(login_sample.models.keys())
         return {'user_list': user_list, 'totalcount': totalcount}, int(HTTPStatus.OK)
 
     @admin_required()
-    @user_sample.response(int(HTTPStatus.FORBIDDEN), '권한 오류', app.default_error_model)
     @user_sample.expect(_Schema.user_save_model, validate=True)
     @user_sample.marshal_with(_Schema.user_save_result_model, code=int(HTTPStatus.OK), description='사용자 등록결과')
+    @user_sample.response(int(HTTPStatus.FORBIDDEN), '권한 오류', app.default_error_model)
     def post(self):
         """
         사용자 등록
@@ -182,13 +175,12 @@ class UserPost(Resource):
         :rtype:
         """
         args = user_sample.payload
-        result = UsersService().save_user(args['user_id'], args['password'], args['user_name'], None)
+        result = UsersService().save_user(args['user_id'], args['password'], args['user_name'], None, args['auth_code'])
         return {'result': 'Success', 'user_seq': result}, int(HTTPStatus.OK)
 
 
 @user_sample.route('/<int:user_seq>')
 @user_sample.doc(security='bearer_auth')
-@user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
 @user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
 @user_sample.response(int(HTTPStatus.NOT_FOUND), '사용자 없음', app.default_error_model)
 @user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
@@ -217,6 +209,8 @@ class UserSample(Resource):
     @jwt_required()
     @user_sample.expect(_Schema.user_save_model, validate=True)
     @user_sample.marshal_with(_Schema.user_detail_model, code=int(HTTPStatus.OK), description='사용자 상세정보')
+    @user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
+    @user_sample.response(int(HTTPStatus.FORBIDDEN), '권한 오류', app.default_error_model)
     def put(self, user_seq):
         """
         사용자 정보 수정
@@ -229,7 +223,7 @@ class UserSample(Resource):
             raise Unauthorized(gettext(u'로그인한 사용자의 정보만 수정 할 수 있습니다.'))
         args = user_sample.payload
         user_service = UsersService()
-        user_service.save_user(args['user_id'], args['password'], args['user_name'], user_seq)
+        user_service.save_user(args['user_id'], args['password'], args['user_name'], user_seq, args['auth_code'])
         result = user_service.get_user_by_seq(user_seq)
         return result, int(HTTPStatus.OK)
 
@@ -246,4 +240,73 @@ class UserSample(Resource):
         if user_seq != current_user['SEQ']:
             raise Unauthorized(gettext(u'로그인한 사용자의 정보만 삭제 할 수 있습니다.'))
         result = UsersService().check_delete_users([user_seq])
+        return {'result': 'Success', 'deleted_count': result}, int(HTTPStatus.OK)
+
+
+@user_sample.route('/auth_code/<auth_code:auth_code>')
+@user_sample.param('auth_code', enum=list([v.name for v in AuthCode]))
+@user_sample.doc(security='bearer_auth')
+@user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.NOT_FOUND), '사용자 없음', app.default_error_model)
+@user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
+class UserListByAuthCodes(Resource):
+    """
+    사용자 권한에 따른 목록 조회
+    """
+    @jwt_required()
+    @user_sample.expect(common_list_params, validate=True)
+    @user_sample.marshal_with(_Schema.user_list_model, code=int(HTTPStatus.OK), description='사용자 목록')
+    def get(self, auth_code):
+        """
+        사용자 권한에 해당하는 목록 조회
+        :param auth_code:
+        :type auth_code:
+        :return:
+        :rtype:
+        """
+        args = common_list_params.parse_args()
+        (user_list, totalcount) = UsersService().get_user_list_by_auth_code(args['start_row'], args['row_per_page'], auth_code)
+        return {'user_list': user_list, 'totalcount': totalcount}, int(HTTPStatus.OK)
+
+
+@user_sample.route('/user_seqs/<int_list:user_seqs>')
+@user_sample.param('user_seqs', example='1,2,3')
+@user_sample.doc(security='bearer_auth')
+@user_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.NOT_FOUND), '사용자 없음', app.default_error_model)
+@user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
+@user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
+class UserListByUserSeq(Resource):
+    """
+    선택된 USER_SEQ에 따른 목록 조회, 삭제
+    """
+    @jwt_required()
+    @user_sample.expect(common_list_params, validate=True)
+    @user_sample.marshal_with(_Schema.user_list_model, code=int(HTTPStatus.OK), description='사용자 목록')
+    @user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
+    def get(self, user_seqs):
+        """
+        선택된 USER_SEQ에 해당하는 목록 조회
+        :param user_seqs:
+        :type user_seqs:
+        :return:
+        :rtype:
+        """
+        args = common_list_params.parse_args()
+        (user_list, totalcount) = UsersService().get_user_list_by_user_seqs(args['start_row'], args['row_per_page'], user_seqs)
+        return {'user_list': user_list, 'totalcount': totalcount}, int(HTTPStatus.OK)
+
+    @admin_required()
+    @user_sample.marshal_with(_Schema.user_delete_result_model, code=int(HTTPStatus.OK), description='사용자 삭제결과')
+    def delete(self, user_seqs):
+        """
+        선택된 USER_SEQ에 해당하는 사용자 삭제
+        :param user_seqs:
+        :type user_seqs:
+        :return:
+        :rtype:
+        """
+        result = UsersService().check_delete_users(user_seqs)
         return {'result': 'Success', 'deleted_count': result}, int(HTTPStatus.OK)

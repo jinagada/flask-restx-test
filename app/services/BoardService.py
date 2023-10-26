@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import shutil
@@ -22,16 +23,49 @@ class BoardService:
         self.logger = logging.getLogger(f'{PROJECT_ID}.services.BoardService')
 
     @staticmethod
-    def get_board_list(start_row, row_per_page):
+    def _get_board_list(start_row, row_per_page, boards_code=None):
         """
         Board 목록 조회
         :param start_row:
         :param row_per_page:
         :return:
         """
-        board_list = Sqlite3().execute('SELECT SEQ, TITLE, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, RUSER, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE, MUSER FROM BOARDS ORDER BY RDATE DESC LIMIT ?, ?', (start_row, row_per_page))
-        totalcount = Sqlite3().execute(query='SELECT COUNT(*) AS CNT FROM BOARDS', is_one=True)['CNT']
+        select_sql = 'SELECT SEQ, BOARDS_CODE, TITLE, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, RUSER, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE, MUSER FROM BOARDS'
+        where_sql = ' WHERE 1 = 1'
+        # BoardsCode 조건 추가
+        if boards_code:
+            where_sql = where_sql + f' AND BOARDS_CODE = \'{boards_code}\''
+        orderby_sql = ' ORDER BY RDATE DESC LIMIT ?, ?'
+        board_list = Sqlite3().execute(select_sql + where_sql + orderby_sql, (start_row, row_per_page))
+        select_sql = 'SELECT COUNT(*) AS CNT FROM BOARDS'
+        totalcount = Sqlite3().execute(query=select_sql + where_sql, is_one=True)['CNT']
         return board_list, totalcount
+
+    def get_board_list(self, start_row, row_per_page):
+        """
+        Board 페이징 목록 조회
+        :param start_row:
+        :type start_row:
+        :param row_per_page:
+        :type row_per_page:
+        :return:
+        :rtype:
+        """
+        return self._get_board_list(start_row, row_per_page)
+
+    def get_board_list_by_boards_code(self, start_row, row_per_page, boards_code):
+        """
+        BoardsCode 조건의 Board 페이징 목록 조회
+        :param start_row:
+        :type start_row:
+        :param row_per_page:
+        :type row_per_page:
+        :param boards_code:
+        :type boards_code:
+        :return:
+        :rtype:
+        """
+        return self._get_board_list(start_row, row_per_page, boards_code)
 
     @staticmethod
     def get_board_by_seq(board_seq):
@@ -40,34 +74,52 @@ class BoardService:
         :param board_seq:
         :return:
         """
-        board_info = Sqlite3().execute('SELECT SEQ, TITLE, CONTENTS, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, RUSER, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE, MUSER FROM BOARDS WHERE SEQ = ?', (board_seq,), True)
+        board_info = Sqlite3().execute('SELECT SEQ, BOARDS_CODE, TITLE, CONTENTS, ADD_FIELDS, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, RUSER, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE, MUSER FROM BOARDS WHERE SEQ = ?', (board_seq,), True)
+        board_info['ADD_FIELDS'] = json.loads(board_info['ADD_FIELDS'])
         return board_info
 
     @staticmethod
-    def _insert_board(title, contents, user_id):
+    def _insert_board(boards_code, title, contents, add_fields, user_id):
         """
         Board 정보 등록
+        :param boards_code:
+        :type boards_code:
         :param title:
+        :type title:
         :param contents:
+        :type contents:
+        :param add_fields:
+        :type add_fields:
         :param user_id:
+        :type user_id:
         :return:
+        :rtype:
         """
-        result = Sqlite3().cmd('INSERT INTO BOARDS (TITLE, CONTENTS, RDATE, RUSER, MDATE, MUSER) VALUES (?, ?, DATETIME(\'now\', \'localtime\'), ?, DATETIME(\'now\', \'localtime\'), ?)',
-                               (title, contents, user_id, user_id), True)
+        result = Sqlite3().cmd('INSERT INTO BOARDS (BOARDS_CODE, TITLE, CONTENTS, ADD_FIELDS, RDATE, RUSER, MDATE, MUSER) VALUES (?, ?, ?, ?, DATETIME(\'now\', \'localtime\'), ?, DATETIME(\'now\', \'localtime\'), ?)',
+                               (boards_code, title, contents, json.dumps(add_fields), user_id, user_id), True)
         return result
 
     @staticmethod
-    def _update_board(board_seq, title, contents, user_id):
+    def _update_board(board_seq, boards_code, title, contents, add_fields, user_id):
         """
         Board 정보 수정
         :param board_seq:
+        :type board_seq:
+        :param boards_code:
+        :type boards_code:
         :param title:
+        :type title:
         :param contents:
+        :type contents:
+        :param add_fields:
+        :type add_fields:
         :param user_id:
+        :type user_id:
         :return:
+        :rtype:
         """
-        result = Sqlite3().cmd('UPDATE BOARDS SET TITLE = ?, CONTENTS = ?, MUSER = ?, MDATE = DATETIME(\'now\', \'localtime\') WHERE SEQ = ?',
-                               (title, contents, user_id, board_seq))
+        result = Sqlite3().cmd('UPDATE BOARDS SET BOARDS_CODE = ?, TITLE = ?, CONTENTS = ?, ADD_FIELDS = ?, MUSER = ?, MDATE = DATETIME(\'now\', \'localtime\') WHERE SEQ = ?',
+                               (boards_code, title, contents, json.dumps(add_fields), user_id, board_seq))
         return result
 
     def delete_boards(self, board_seq_list):
@@ -84,14 +136,23 @@ class BoardService:
         result = Sqlite3().cmd(f'DELETE FROM BOARDS WHERE SEQ IN ({in_query_str})', tuple(board_seq_list))
         return result
 
-    def save_board(self, board_seq, title, contents, user_id):
+    def save_board(self, board_seq, boards_code, title, contents, add_fields, user_id):
         """
         Board 정보 저장
         :param board_seq:
+        :type board_seq:
+        :param boards_code:
+        :type boards_code:
         :param title:
+        :type title:
         :param contents:
+        :type contents:
+        :param add_fields:
+        :type add_fields:
         :param user_id:
+        :type user_id:
         :return:
+        :rtype:
         """
         if board_seq:
             board_info = self.get_board_by_seq(board_seq)
@@ -100,9 +161,9 @@ class BoardService:
         else:
             board_info = None
         if board_info:
-            result = self._update_board(board_seq, title, contents, user_id)
+            result = self._update_board(boards_code, board_seq, title, contents, add_fields, user_id)
         else:
-            result = self._insert_board(title, contents, user_id)
+            result = self._insert_board(boards_code, title, contents, add_fields, user_id)
         if result < 1:
             raise SystemError('Save Board Error')
         return result

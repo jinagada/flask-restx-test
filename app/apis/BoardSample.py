@@ -85,10 +85,10 @@ class BoardPost(Resource):
     """
     # request : query 파라메터에서도 validate 옵션을 사용하면 설정된 유효성 검사가 function 진입전에 실행됨
     @jwt_required(optional=True)
-    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     @board_sample.expect(common_list_params, validate=True)
     # response : marshal_with를 사용하면 결과값에 대한 모델매핑과 apidoc을 한번에 작성 할 수 있음
     @board_sample.marshal_with(_Schema.board_list_model, code=int(HTTPStatus.OK), description='게시물 목록')
+    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     def get(self):
         """
         게시물 목록 조회
@@ -109,9 +109,9 @@ class BoardPost(Resource):
     # request : Model을 사용할 경우 validate 옵션을 설정해야 설정된 유효성 검사를 할 수 있음
     #           RESTX_VALIDATE 설정으로 기본값을 변경 할 수 있음
     @jwt_required()
-    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     @board_sample.expect(_Schema.board_save_model, validate=True)
     @board_sample.marshal_with(_Schema.board_save_result_model, code=int(HTTPStatus.OK), description='게시물 등록결과')
+    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     def post(self):
         """
         게시물 등록
@@ -121,7 +121,7 @@ class BoardPost(Resource):
         # request를 사용하지 않고, Namespace에서 payload로 JSON 객체를 가져올 수 있음
         args = board_sample.payload
         # user_id 정보는 파라메터가 아닌 flask_jwt_extended 모듈의 current_user 정보에서 가져옮
-        result = BoardService().save_board(None, args['title'], args['contents'], current_user['USER_ID'])
+        result = BoardService().save_board(None, args['boards_code'], args['title'], args['contents'], args['add_fields'], current_user['USER_ID'])
         return {'result': 'Success', 'board_seq': result}, int(HTTPStatus.OK)
 
 
@@ -150,9 +150,9 @@ class BoardSample(Resource):
 
     @jwt_required()
     @board_sample.doc(security='bearer_auth')
-    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     @board_sample.expect(_Schema.board_save_model, validate=True)
     @board_sample.marshal_with(_Schema.board_detail_model, code=int(HTTPStatus.OK), description='게시물 수정결과')
+    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     def put(self, board_seq):
         """
         게시물 수정
@@ -163,14 +163,14 @@ class BoardSample(Resource):
         """
         args = board_sample.payload
         board_service = BoardService()
-        board_service.save_board(board_seq, args['title'], args['contents'], current_user['USER_ID'])
+        board_service.save_board(board_seq, args['boards_code'], args['title'], args['contents'], args['add_fields'], current_user['USER_ID'])
         result = board_service.get_board_by_seq(board_seq)
         return result, int(HTTPStatus.OK)
 
     @jwt_required()
     @board_sample.doc(security='bearer_auth')
-    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     @board_sample.marshal_with(_Schema.board_delete_result_model, code=int(HTTPStatus.OK), description='게시물 삭제결과')
+    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     def delete(self, board_seq):
         """
         게시물 삭제
@@ -203,19 +203,15 @@ class FileUploadPost(Resource):
     def post(self):
         """
         파일 업로드
+        action='append' 인경우 args['file'] 반환값이 [] 이므로 주의할것!!
         :return:
         :rtype:
         """
         args = _Schema.file_upload_params.parse_args()
         uploaded_file = args['file']
         uploaded_file_list = []
-        if len(uploaded_file) > 1:
-            # 여러 파일의 경우
-            for file_obj in uploaded_file:
-                uploaded_file_list.append(self._file_save(file_obj))
-        else:
-            # 단일 파일의 경우
-            uploaded_file_list.append(self._file_save(uploaded_file[0]))
+        for file_obj in uploaded_file:
+            uploaded_file_list.append(self._file_save(file_obj))
         return {'result': 'Success', 'files': uploaded_file_list}, int(HTTPStatus.OK)
 
     @staticmethod
@@ -259,9 +255,9 @@ class BoardFilePost(Resource):
 
     @jwt_required()
     @board_sample.doc(security='bearer_auth')
-    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     @board_sample.expect(_Schema.file_save_list_model, validate=True)
     @board_sample.marshal_with(_Schema.file_save_result_model, code=int(HTTPStatus.OK), description='게시물에 파일정보 저장결과')
+    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     def post(self, board_seq):
         """
         게시물에 파일정보 저장

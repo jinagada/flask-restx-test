@@ -4,6 +4,8 @@ from flask_babel import gettext
 from flask_jwt_extended import verify_jwt_in_request, get_jwt
 from werkzeug.exceptions import Forbidden
 
+from ..enums import AuthCode
+
 
 def admin_required():
     """
@@ -21,9 +23,11 @@ def admin_required():
             # flask_jwt_extended.verify_jwt_in_request() can be used to build your own decorators. This is the same function used by flask_jwt_extended.jwt_required().
             verify_jwt_in_request()
             claims = get_jwt()
-            if claims['aud'] == 'ADMIN':
+            if claims['aud'] == AuthCode.ADMIN.name:
                 return fn(*args, **kwargs)
             else:
-                raise Forbidden(gettext(u'ADMIN 권한이 필요합니다.'))
+                # gettext에서 문자열 내부 변수 사용시 한글과 충돌이 발생하여 변수 사용없이 메시지를 처리함
+                # raise Forbidden(gettext(u'%(auth_code) 권한이 필요합니다.', auth_code=AuthCode.ADMIN.value)) : ValueError: unsupported format character '?' (0xad8c) at index 8
+                raise Forbidden(gettext(u'관리자 권한이 필요합니다.'))
         return decorator
     return wrapper

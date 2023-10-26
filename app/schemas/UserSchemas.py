@@ -1,5 +1,6 @@
 from flask_restx import fields, Model
 
+from ..enums import AuthCode
 
 # 로그인 Model
 login_model = Model('Login', {
@@ -17,7 +18,8 @@ jwt_token_refresh_model = Model('JWTTokenRefresh', {
 user_save_model = Model('UserSave', {
     'user_id': fields.String(description='사용자ID', example='UserId', attribute='USER_ID', required=True, min_length=5, max_length=20),
     'password': fields.String(description='비밀번호', example='Password', attribute='USER_PW', required=True, min_length=5, max_length=15),
-    'user_name': fields.String(description='사용자명', example='UserName', attribute='USER_NAME', required=True, min_length=2, max_length=50)
+    'user_name': fields.String(description='사용자명', example='UserName', attribute='USER_NAME', required=True, min_length=2, max_length=50),
+    'auth_code': fields.String(description='권한코드', example='USER', attribute='AUTH_CODE', required=True, enum=list([v.name for v in AuthCode]))
 })
 user_detail_model = user_save_model.inherit('UserDetail', {
     'user_seq': fields.Integer(description='사용자 번호', example=1, attribute='SEQ'),
