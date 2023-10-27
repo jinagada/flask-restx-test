@@ -2,14 +2,14 @@
 이미 설치된 프로그램들
 * conda version : 23.7.3
 * Python 3.7.12
-* Flask 2.1.3
+* Flask 2.2.2
 * Flask-Bootstrap 3.3.7.1
 * Jinja2 3.1.2
 * Werkzeug 2.2.3
 * flask-restx 1.0.6
-* Sqlite 3.43.0
-* flask-jwt-extended 4.5.2
-* flask-babel 3.1.0
+* Sqlite 3.41.2
+* flask-jwt-extended 4.5.3
+* flask-babel 2.0.0
 
 # 참고 문서
 - [Welcome to Flask-RESTX’s documentation!](https://flask-restx.readthedocs.io/en/latest/index.html)
