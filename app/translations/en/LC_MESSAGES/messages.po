@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2023-09-15 15:04+0900\n"
+"POT-Creation-Date: 2023-10-27 14:52+0900\n"
 "PO-Revision-Date: 2023-09-15 14:58+0900\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -16,43 +16,69 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.12.1\n"
+"Generated-By: Babel 2.13.0\n"
 
-#: __init__.py:79
+#: __init__.py:80
 msgid "운영에서는 문서를 제공하지 않음"
 msgstr "Operations does not provide documentation"
 
-#: apis/BoardSample.py:184 apis/BoardSample.py:220 apis/BoardSample.py:280
-#: apis/BoardSample.py:300 services/BoardService.py:99
+#: apis/BoardSample.py:154 apis/BoardSample.py:186 apis/BoardSample.py:262
+#: apis/BoardSample.py:332 apis/BoardSample.py:350 services/BoardService.py:187
 msgid "게시물이 존재하지 않습니다."
 msgstr "This post does not exist."
 
-#: apis/UserSample.py:105 apis/UserSample.py:120
+#: apis/UserSample.py:76 apis/UserSample.py:88
 msgid "사용자 정보가 일치하지 않습니다."
 msgstr "User information does not match."
 
-#: apis/UserSample.py:238
+#: apis/UserSample.py:203
 msgid "로그인한 사용자의 정보만 조회 할 수 있습니다."
 msgstr "Only logged in user information can be viewed."
 
-#: apis/UserSample.py:241 services/UsersService.py:109
+#: apis/UserSample.py:206 apis/UserSample.py:242 apis/UserSample.py:311
+#: services/UsersService.py:186
 msgid "사용자가 존재하지 않습니다."
 msgstr "User does not exist."
 
-#: apis/UserSample.py:256
+#: apis/UserSample.py:223
 msgid "로그인한 사용자의 정보만 수정 할 수 있습니다."
 msgstr "Only logged in user information can be modified."
 
-#: apis/UserSample.py:274
-msgid "로그인한 사용자의 정보만 삭제 할 수 있습니다."
-msgstr "Only logged in user information can be deleted."
+#: enums/CommonEnums.py:10
+msgid "관리자"
+msgstr "Manager"
 
-#: services/UsersService.py:139
+#: enums/CommonEnums.py:11
+msgid "사용자"
+msgstr "User"
+
+#: enums/CommonEnums.py:15
+msgid "공지사항"
+msgstr "Announcement"
+
+#: enums/CommonEnums.py:16
+msgid "FAQ"
+msgstr "FAQ"
+
+#: enums/CommonEnums.py:17
+msgid "게시물"
+msgstr "Post"
+
+#: services/UsersService.py:191
 #, fuzzy
-msgid "사용자를 전부 삭제 할 수는 없습니다."
+msgid "사용자의 권한정보는 변경 할 수 없습니다."
+msgstr "Only logged in user information can be viewed."
+
+#: services/UsersService.py:219
+#, fuzzy
+msgid "관리자는 삭제 할 수 없습니다."
 msgstr "You cannot delete all users."
 
-#: utils/Decorator.py:27
-msgid "ADMIN 권한이 필요합니다."
-msgstr "ADMIN privileges are required."
+#: utils/Converters.py:9
+msgid "파라메터 Type 오류"
+msgstr "Parameter Type Error"
 
+#: utils/Decorator.py:31
+#, fuzzy
+msgid "관리자 권한이 필요합니다."
+msgstr "ADMIN privileges are required."

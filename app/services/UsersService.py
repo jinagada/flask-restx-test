@@ -39,8 +39,7 @@ class UsersService:
         user_info = Sqlite3().execute('SELECT SEQ, USER_ID, USER_PW, USER_NAME, AUTH_CODE, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE FROM USERS WHERE SEQ = ?', (user_seq,), True)
         return user_info
 
-    @staticmethod
-    def _get_user_list(start_row, row_per_page, auth_code=None, user_seqs=None):
+    def _get_user_list(self, start_row, row_per_page, auth_code=None, user_seqs=None):
         """
         User 목록 조회
         :param start_row:
@@ -56,16 +55,24 @@ class UsersService:
         """
         select_sql = 'SELECT SEQ, USER_ID, USER_PW, USER_NAME, AUTH_CODE, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE FROM USERS '
         where_sql = ' WHERE 1 = 1'
+        orderby_sql = ' ORDER BY RDATE DESC'
+        limit_sql = ' LIMIT ?, ?'
+        params = (start_row, row_per_page)
         # 권한코드 조건 추가
         if auth_code:
             where_sql = where_sql + f' AND AUTH_CODE = \'{auth_code}\''
         # user_seqs 조건 추가
         if user_seqs and len(user_seqs) > 0:
             where_sql = where_sql + f' AND SEQ IN ({",".join([str(u) for u in user_seqs])})'
-        orderby_sql = ' ORDER BY RDATE DESC LIMIT ?, ?'
-        user_list = Sqlite3().execute(select_sql + where_sql + orderby_sql, (start_row, row_per_page))
+            limit_sql = ''
+            params = None
+        sql = select_sql + where_sql + orderby_sql + limit_sql
+        self.logger.debug(f'_get_user_list LIST sql : {sql}')
+        user_list = Sqlite3().execute(sql, params)
         select_sql = 'SELECT COUNT(*) AS CNT FROM USERS'
-        totalcount = Sqlite3().execute(query=select_sql + where_sql, is_one=True)['CNT']
+        sql = select_sql + where_sql
+        self.logger.debug(f'_get_user_list COUNT sql : {sql}')
+        totalcount = Sqlite3().execute(query=sql, is_one=True)['CNT']
         for user in user_list:
             user['RDATE'] = user['RDATE'] + '.000000+09:00'
             user['MDATE'] = user['MDATE'] + '.000000+09:00'
@@ -97,19 +104,15 @@ class UsersService:
         """
         return self._get_user_list(start_row, row_per_page, auth_code)
 
-    def get_user_list_by_user_seqs(self, start_row, row_per_page, user_seqs):
+    def get_user_list_by_user_seqs(self, user_seqs):
         """
         user_seqs 조건의 User 페이징 목록 조회
-        :param start_row:
-        :type start_row:
-        :param row_per_page:
-        :type row_per_page:
         :param user_seqs:
         :type user_seqs:
         :return:
         :rtype:
         """
-        return self._get_user_list(start_row, row_per_page, user_seqs=user_seqs)
+        return self._get_user_list(0, 0, user_seqs=user_seqs)
 
     @staticmethod
     def _insert_user(user_id, user_pw, user_name, auth_code):

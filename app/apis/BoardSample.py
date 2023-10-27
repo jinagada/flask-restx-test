@@ -12,6 +12,7 @@ from werkzeug.exceptions import NotFound
 
 import app
 from ..configs import PathConfig, PROJECT_ID
+from ..enums import BoardsCode
 from ..schemas import common_list_params, BoardSchemas
 from ..services import BoardService
 
@@ -45,6 +46,7 @@ class _Schema:
     예) f.marshal_with(a, code=200, description='a')
     """
     # 게시물 상세 모델
+    board_sample.add_model(BoardSchemas.wildcard_multi_model.name, BoardSchemas.wildcard_multi_model)
     board_save_model = board_sample.add_model(BoardSchemas.board_save_model.name, BoardSchemas.board_save_model)
     board_detail_model = board_sample.add_model(BoardSchemas.board_detail_model.name, BoardSchemas.board_detail_model)
     # 게시물 등록 결과
@@ -52,6 +54,7 @@ class _Schema:
     # 게시물 삭제 결과
     board_delete_result_model = board_sample.add_model(BoardSchemas.board_delete_result_model.name, BoardSchemas.board_delete_result_model)
     # 게시물 목록 모델
+    board_sample.add_model(BoardSchemas.board_detail_model_for_list.name, BoardSchemas.board_detail_model_for_list)
     board_list_model = board_sample.add_model(BoardSchemas.board_list_model.name, BoardSchemas.board_list_model)
     # 파일 업로드 파라메터
     # action='append'를 사용하면 여러 파일을 동시에 업로드 할 수 있음
@@ -126,7 +129,9 @@ class BoardPost(Resource):
 
 
 @board_sample.route('/<int:board_seq>')
+@board_sample.doc(security='bearer_auth')
 @board_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
+@board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
 @board_sample.response(int(HTTPStatus.NOT_FOUND), '게시물 없음', app.default_error_model)
 @board_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
 @board_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
@@ -134,6 +139,7 @@ class BoardSample(Resource):
     """
     게시물 한건에 대한 조회, 수정, 삭제
     """
+    @jwt_required(optional=True)
     @board_sample.marshal_with(_Schema.board_detail_model, code=int(HTTPStatus.OK), description='게시물 상세정보')
     def get(self, board_seq):
         """
@@ -149,10 +155,8 @@ class BoardSample(Resource):
         return result, int(HTTPStatus.OK)
 
     @jwt_required()
-    @board_sample.doc(security='bearer_auth')
     @board_sample.expect(_Schema.board_save_model, validate=True)
     @board_sample.marshal_with(_Schema.board_detail_model, code=int(HTTPStatus.OK), description='게시물 수정결과')
-    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     def put(self, board_seq):
         """
         게시물 수정
@@ -168,9 +172,7 @@ class BoardSample(Resource):
         return result, int(HTTPStatus.OK)
 
     @jwt_required()
-    @board_sample.doc(security='bearer_auth')
     @board_sample.marshal_with(_Schema.board_delete_result_model, code=int(HTTPStatus.OK), description='게시물 삭제결과')
-    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     def delete(self, board_seq):
         """
         게시물 삭제
@@ -180,6 +182,82 @@ class BoardSample(Resource):
         :rtype:
         """
         result = BoardService().delete_boards([board_seq])
+        if result < 1:
+            raise NotFound(gettext(u'게시물이 존재하지 않습니다.'))
+        return {'result': 'Success', 'deleted_count': result}, int(HTTPStatus.OK)
+
+
+@board_sample.route('/<boards_code:boards_code>')
+@board_sample.route('/boards_code/<boards_code:boards_code>', doc={'description': '명시적으로 URL에 /board/boards_code/{boards_code}를 사용 할 수 있음'})
+@board_sample.param('boards_code', enum=list([v.name for v in BoardsCode]))
+@board_sample.doc(security='bearer_auth')
+@board_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
+@board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
+@board_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
+@board_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
+class BoardListByBoardsCode(Resource):
+    """
+    게시물 BOARDS_CODE 별 목록 조회
+    """
+    @jwt_required(optional=True)
+    @board_sample.expect(common_list_params, validate=True)
+    @board_sample.marshal_with(_Schema.board_list_model, code=int(HTTPStatus.OK), description='게시물 목록')
+    def get(self, boards_code):
+        """
+        BOARDS_CODE 별 목록 조회
+        :param boards_code:
+        :type boards_code:
+        :return:
+        :rtype:
+        """
+        # JWT TOKEN 이 있는경우 해당 정보를 로그로 남김
+        current_identity = get_jwt_identity()
+        if current_identity:
+            board_sample.logger.info(f'게시물 BOARDS_CODE 별 목록 조회 접근자 : {current_user["USER_ID"]}')
+        args = common_list_params.parse_args()
+        (board_list, totalcount) = BoardService().get_board_list_by_boards_code(args['start_row'], args['row_per_page'], boards_code)
+        return {'totalcount': totalcount, 'board_list': board_list}, int(HTTPStatus.OK)
+
+
+@board_sample.route('/board_seqs/<int_list:board_seqs>')
+@board_sample.param('board_seqs', example='1,2,3')
+@board_sample.doc(security='bearer_auth')
+@board_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
+@board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
+@board_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
+@board_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
+class BoardListByBoardSeqs(Resource):
+    """
+    선택된 BOARD_SEQ에 따른 목록 조회, 삭제
+    """
+    @jwt_required(optional=True)
+    @board_sample.marshal_with(_Schema.board_list_model, code=int(HTTPStatus.OK), description='게시물 목록')
+    def get(self, board_seqs):
+        """
+        선택된 BOARD_SEQ에 해당하는 목록 조회
+        :param board_seqs:
+        :type board_seqs:
+        :return:
+        :rtype:
+        """
+        # JWT TOKEN 이 있는경우 해당 정보를 로그로 남김
+        current_identity = get_jwt_identity()
+        if current_identity:
+            board_sample.logger.info(f'게시물 BOARD_SEQ에 따른 목록 조회 접근자 : {current_user["USER_ID"]}')
+        (board_list, totalcount) = BoardService().get_board_list_by_board_seqs(board_seqs)
+        return {'totalcount': totalcount, 'board_list': board_list}, int(HTTPStatus.OK)
+
+    @jwt_required()
+    @board_sample.marshal_with(_Schema.board_delete_result_model, code=int(HTTPStatus.OK), description='게시물 삭제결과')
+    def delete(self, board_seqs):
+        """
+        선택된 BOARD_SEQ에 해당하는 목록 삭제
+        :param board_seqs:
+        :type board_seqs:
+        :return:
+        :rtype:
+        """
+        result = BoardService().delete_boards(board_seqs)
         if result < 1:
             raise NotFound(gettext(u'게시물이 존재하지 않습니다.'))
         return {'result': 'Success', 'deleted_count': result}, int(HTTPStatus.OK)
@@ -232,11 +310,14 @@ class FileUploadPost(Resource):
 
 
 @board_sample.route('/<int:board_seq>/file')
+@board_sample.doc(security='bearer_auth')
 @board_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
+@board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
 @board_sample.response(int(HTTPStatus.NOT_FOUND), '게시물 없음', app.default_error_model)
 @board_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
 @board_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
 class BoardFilePost(Resource):
+    @jwt_required(optional=True)
     @board_sample.marshal_with(_Schema.file_list_model, code=int(HTTPStatus.OK), description='게시물의 파일목록')
     def get(self, board_seq):
         """
@@ -254,10 +335,8 @@ class BoardFilePost(Resource):
         return {'board_seq': board_seq, 'file_list': result}, int(HTTPStatus.OK)
 
     @jwt_required()
-    @board_sample.doc(security='bearer_auth')
     @board_sample.expect(_Schema.file_save_list_model, validate=True)
     @board_sample.marshal_with(_Schema.file_save_result_model, code=int(HTTPStatus.OK), description='게시물에 파일정보 저장결과')
-    @board_sample.response(int(HTTPStatus.UNAUTHORIZED), '인증 오류', app.default_error_model)
     def post(self, board_seq):
         """
         게시물에 파일정보 저장

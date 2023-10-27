@@ -51,7 +51,7 @@ class BoardsCodeConverter(BaseConverter):
         try:
             request_type = [v for v in BoardsCode if v.name == value]
             return request_type[0].name
-        except ValueError:
+        except Exception:
             raise ValidationError(ERR_MSG)
 
     def to_url(self, value: t.Any) -> str:

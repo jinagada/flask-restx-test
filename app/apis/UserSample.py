@@ -80,9 +80,9 @@ class LoginPost(Resource):
                 # timedelta를 사용하여 만료기간을 설정할 수 있음
                 return {
                     # access_token : 5분(사용자의 인증정보 및 권한 정보를 가진 짧은 주기의 토큰으로 임시저장소에 저장됨)
-                    'access_token': create_access_token(identity=user_info, additional_claims=additional_claims, expires_delta=timedelta(minutes=5)),
+                    'access_token': create_access_token(identity=user_info, additional_claims=additional_claims, expires_delta=timedelta(minutes=30)),
                     # refresh_token : 1시간(사용자의 인증에 대한 갱신을 위한 긴 주기의 토큰으로 안전한 저장소에 저장됨)
-                    'refresh_token': create_refresh_token(identity=user_info, expires_delta=timedelta(hours=1))
+                    'refresh_token': create_refresh_token(identity=user_info, expires_delta=timedelta(hours=2))
                 }, int(HTTPStatus.OK)
         else:
             raise Unauthorized(gettext(u'사용자 정보가 일치하지 않습니다.'))
@@ -227,7 +227,7 @@ class UserSample(Resource):
         result = user_service.get_user_by_seq(user_seq)
         return result, int(HTTPStatus.OK)
 
-    @jwt_required()
+    @admin_required()
     @user_sample.marshal_with(_Schema.user_delete_result_model, code=int(HTTPStatus.OK), description='사용자 삭제결과')
     def delete(self, user_seq):
         """
@@ -237,9 +237,9 @@ class UserSample(Resource):
         :return:
         :rtype:
         """
-        if user_seq != current_user['SEQ']:
-            raise Unauthorized(gettext(u'로그인한 사용자의 정보만 삭제 할 수 있습니다.'))
         result = UsersService().check_delete_users([user_seq])
+        if result < 1:
+            raise NotFound(gettext(u'사용자가 존재하지 않습니다.'))
         return {'result': 'Success', 'deleted_count': result}, int(HTTPStatus.OK)
 
 
@@ -278,12 +278,11 @@ class UserListByAuthCodes(Resource):
 @user_sample.response(int(HTTPStatus.NOT_FOUND), '사용자 없음', app.default_error_model)
 @user_sample.response(int(HTTPStatus.METHOD_NOT_ALLOWED), 'METHOD 오류', app.default_error_model)
 @user_sample.response(int(HTTPStatus.INTERNAL_SERVER_ERROR), '시스템 오류', app.default_error_model)
-class UserListByUserSeq(Resource):
+class UserListByUserSeqs(Resource):
     """
     선택된 USER_SEQ에 따른 목록 조회, 삭제
     """
     @jwt_required()
-    @user_sample.expect(common_list_params, validate=True)
     @user_sample.marshal_with(_Schema.user_list_model, code=int(HTTPStatus.OK), description='사용자 목록')
     @user_sample.response(int(HTTPStatus.BAD_REQUEST), '파라메터 오류', app.default_error_model)
     def get(self, user_seqs):
@@ -294,8 +293,7 @@ class UserListByUserSeq(Resource):
         :return:
         :rtype:
         """
-        args = common_list_params.parse_args()
-        (user_list, totalcount) = UsersService().get_user_list_by_user_seqs(args['start_row'], args['row_per_page'], user_seqs)
+        (user_list, totalcount) = UsersService().get_user_list_by_user_seqs(user_seqs)
         return {'user_list': user_list, 'totalcount': totalcount}, int(HTTPStatus.OK)
 
     @admin_required()
@@ -309,4 +307,6 @@ class UserListByUserSeq(Resource):
         :rtype:
         """
         result = UsersService().check_delete_users(user_seqs)
+        if result < 1:
+            raise NotFound(gettext(u'사용자가 존재하지 않습니다.'))
         return {'result': 'Success', 'deleted_count': result}, int(HTTPStatus.OK)

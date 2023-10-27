@@ -22,23 +22,40 @@ class BoardService:
         """
         self.logger = logging.getLogger(f'{PROJECT_ID}.services.BoardService')
 
-    @staticmethod
-    def _get_board_list(start_row, row_per_page, boards_code=None):
+    def _get_board_list(self, start_row, row_per_page, boards_code=None, board_seqs=None):
         """
         Board 목록 조회
         :param start_row:
+        :type start_row:
         :param row_per_page:
+        :type row_per_page:
+        :param boards_code:
+        :type boards_code:
+        :param board_seqs:
+        :type board_seqs:
         :return:
+        :rtype:
         """
         select_sql = 'SELECT SEQ, BOARDS_CODE, TITLE, STRFTIME("%Y-%m-%dT%H:%M:%S", RDATE) AS RDATE, RUSER, STRFTIME("%Y-%m-%dT%H:%M:%S", MDATE) AS MDATE, MUSER FROM BOARDS'
         where_sql = ' WHERE 1 = 1'
+        orderby_sql = ' ORDER BY RDATE DESC'
+        limit_sql = ' LIMIT ?, ?'
+        params = (start_row, row_per_page)
         # BoardsCode 조건 추가
         if boards_code:
             where_sql = where_sql + f' AND BOARDS_CODE = \'{boards_code}\''
-        orderby_sql = ' ORDER BY RDATE DESC LIMIT ?, ?'
-        board_list = Sqlite3().execute(select_sql + where_sql + orderby_sql, (start_row, row_per_page))
+        # board_seqs 조건 추가
+        if board_seqs and len(board_seqs) > 0:
+            where_sql = where_sql + f' AND SEQ IN ({",".join([str(u) for u in board_seqs])})'
+            limit_sql = ''
+            params = None
+        sql = select_sql + where_sql + orderby_sql + limit_sql
+        self.logger.debug(f'_get_user_list LIST sql : {sql}')
+        board_list = Sqlite3().execute(sql, params)
         select_sql = 'SELECT COUNT(*) AS CNT FROM BOARDS'
-        totalcount = Sqlite3().execute(query=select_sql + where_sql, is_one=True)['CNT']
+        sql = select_sql + where_sql
+        self.logger.debug(f'_get_user_list COUNT sql : {sql}')
+        totalcount = Sqlite3().execute(query=sql, is_one=True)['CNT']
         return board_list, totalcount
 
     def get_board_list(self, start_row, row_per_page):
@@ -66,6 +83,16 @@ class BoardService:
         :rtype:
         """
         return self._get_board_list(start_row, row_per_page, boards_code)
+
+    def get_board_list_by_board_seqs(self, board_seqs):
+        """
+        board_seqs 조건의 Board 페이징 목록 조회
+        :param board_seqs:
+        :type board_seqs:
+        :return:
+        :rtype:
+        """
+        return self._get_board_list(0, 0, board_seqs=board_seqs)
 
     @staticmethod
     def get_board_by_seq(board_seq):
@@ -161,7 +188,7 @@ class BoardService:
         else:
             board_info = None
         if board_info:
-            result = self._update_board(boards_code, board_seq, title, contents, add_fields, user_id)
+            result = self._update_board(board_seq, boards_code, title, contents, add_fields, user_id)
         else:
             result = self._insert_board(boards_code, title, contents, add_fields, user_id)
         if result < 1:
