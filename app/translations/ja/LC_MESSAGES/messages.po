@@ -82,3 +82,4 @@ msgstr "パラメータタイプエラー"
 #, fuzzy
 msgid "관리자 권한이 필요합니다."
 msgstr "ADMIN権限が必要です。"
+

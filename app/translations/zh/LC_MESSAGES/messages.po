@@ -82,3 +82,4 @@ msgstr "参数类型错误"
 #, fuzzy
 msgid "관리자 권한이 필요합니다."
 msgstr "需要管理员权限。"
+

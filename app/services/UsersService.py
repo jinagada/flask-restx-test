@@ -1,5 +1,6 @@
 import logging
 
+import bcrypt
 from flask_babel import gettext
 from werkzeug.exceptions import BadRequest, NotFound, Forbidden
 
@@ -129,8 +130,9 @@ class UsersService:
         :return:
         :rtype:
         """
+        password_bcrypt = bcrypt.hashpw(user_pw.encode('utf-8'), bcrypt.gensalt(10, b'2a'))
         result = Sqlite3().cmd('INSERT INTO USERS (USER_ID, USER_PW, USER_NAME, AUTH_CODE, RDATE, MDATE) VALUES (?, ?, ?, ?, DATETIME(\'now\', \'localtime\'), DATETIME(\'now\', \'localtime\'))',
-                               (user_id, user_pw, user_name, auth_code), True)
+                               (user_id, password_bcrypt, user_name, auth_code), True)
         return result
 
     @staticmethod
@@ -160,8 +162,9 @@ class UsersService:
         :param user_name:
         :return:
         """
+        password_bcrypt = bcrypt.hashpw(user_pw.encode('utf-8'), bcrypt.gensalt(10, b'2a'))
         result = Sqlite3().cmd('UPDATE USERS SET USER_ID = ?, USER_PW = ?, USER_NAME = ?, MDATE = DATETIME(\'now\', \'localtime\') WHERE SEQ = ?',
-                               (user_id, user_pw, user_name, user_seq))
+                               (user_id, password_bcrypt, user_name, user_seq))
         return result
 
     def save_user(self, user_id, user_pw, user_name, user_seq, auth_code):

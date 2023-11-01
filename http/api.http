@@ -4,8 +4,8 @@ Accept-Language: ja
 Content-Type: application/json; charset=UTF-8
 
 {
-  "user_id": "UserId3",
-  "password": "1234!"
+  "user_id": "UserId5",
+  "password": "1234!1"
 }
 
 > {%
@@ -58,25 +58,25 @@ Authorization: Bearer {{access_token}}
 Content-Type: application/json; charset=UTF-8
 
 {
-  "user_id": "UserId7",
+  "user_id": "UserId5",
   "password": "1234!",
-  "user_name": "사용자7",
+  "user_name": "사용자5",
   "auth_code": "USER"
 }
 
 ### UserSample - /user/<int:user_seq>
-GET {{hosts}}/user/2
+GET {{hosts}}/user/6
 Authorization: Bearer {{access_token}}
 
 ### UserSample - /user/<int:user_seq>
-PUT {{hosts}}/user/3
+PUT {{hosts}}/user/6
 Authorization: Bearer {{access_token}}
 Content-Type: application/json; charset=UTF-8
 
 {
-  "user_id": "UserId2",
-  "password": "1234!",
-  "user_name": "사용자2 수정1",
+  "user_id": "UserId5",
+  "password": "1234!1",
+  "user_name": "사용자5 수정1",
   "auth_code": "USER"
 }
 

@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 from http import HTTPStatus
 
+import bcrypt
 from flask_babel import gettext
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, current_user, get_jwt
 from flask_restx import Namespace, Resource
@@ -72,7 +73,8 @@ class LoginPost(Resource):
         args = login_sample.payload
         user_info = UsersService().get_user_by_id(args['user_id'])
         if user_info:
-            if user_info['USER_PW'] != args['password']:
+            # BCrypt를 사용한 비밀번호 확인
+            if not bcrypt.checkpw(args['password'].encode('utf-8'), user_info['USER_PW']):
                 raise Unauthorized(gettext(u'사용자 정보가 일치하지 않습니다.'))
             else:
                 # 권한정보 추가

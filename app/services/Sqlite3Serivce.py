@@ -1,5 +1,7 @@
 import logging
 
+import bcrypt
+
 from ..configs import PROJECT_ID
 from ..datasources import Sqlite3
 from ..enums import AuthCode
@@ -38,7 +40,10 @@ class Sqlite3Service:
         최초 사용자 등록
         :return:
         """
-        result = Sqlite3().cmd(query=f'INSERT INTO USERS (USER_ID, USER_PW, USER_NAME, AUTH_CODE, RDATE, MDATE) VALUES (\'admin\', \'1234!\', \'Admin User\', \'{AuthCode.ADMIN.name}\', DATETIME(\'now\', \'localtime\'), DATETIME(\'now\', \'localtime\'))')
+        # 비밀번호 암호화(Bcrypt) : Java Spring 기본값을 사용하여 호환성 유지
+        password_bcrypt = bcrypt.hashpw('1234!'.encode('utf-8'), bcrypt.gensalt(10, b'2a'))
+        result = Sqlite3().cmd('INSERT INTO USERS (USER_ID, USER_PW, USER_NAME, AUTH_CODE, RDATE, MDATE) VALUES (?, ?, ?, ?, DATETIME(\'now\', \'localtime\'), DATETIME(\'now\', \'localtime\'))',
+                               ('admin', password_bcrypt, 'Admin User', AuthCode.ADMIN.name), True)
         self.logger.info(f'Insert USER : {result}')
         return result
 
